@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Classes — Administration</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23065f46' d='M3 6c0-1.657 3.582-3 9-3s9 1.343 9 3v12c0 1.657-3.582 3-9 3s-9-1.343-9-3z'/%3E%3Cpath fill='%23a7f3d0' d='M6 10h12v2H6zm0 4h7v2H6z'/%3E%3C/svg%3E" />
+  <style>
+    :root{
+      --bg1:#fffdf6; --bg2:#f1fff6;
+      --card:#ffffff; --ring:#e8eee7; --ring2:#dde7df;
+      --text:#2f3e34; --muted:#63766d;
+      --mint:#34d399; --mint2:#a7f3d0; --mint3:#d1fae5;
+      --danger:#ef4444; --amber:#fde68a;
+      --shadow:0 20px 60px rgba(17,24,39,.10); --shadow-sm:0 10px 30px rgba(17,24,39,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;min-height:100vh;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:var(--text);
+      background:
+        radial-gradient(1200px 260px at 100% -10%, #eaffef 0%, transparent 60%),
+        radial-gradient(1200px 240px at 0% -10%, #fff7e0 0%, transparent 60%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .back{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:12px;border:1px solid var(--ring);background:#fff;cursor:pointer;font-weight:900;box-shadow:var(--shadow-sm);text-decoration:none;color:inherit}
+    .title{font-size:28px;font-weight:900;margin:0}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{border:1px solid var(--ring);background:#fff;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer;box-shadow:var(--shadow-sm)}
+    .btn.primary{background:linear-gradient(135deg,var(--mint),var(--mint2));color:#043b2c;border-color:transparent}
+    .search{display:flex;gap:8px;align-items:center;margin:10px 0 16px}
+    .input{flex:1;padding:12px;border:1px solid var(--ring2);border-radius:12px;background:#fff;font-weight:800}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .card{
+      background:linear-gradient(180deg,#fff,#fbfefb);border:1px solid var(--ring);border-radius:16px;padding:14px;box-shadow:var(--shadow);
+      display:flex;flex-direction:column;gap:8px;transition:transform .12s ease
+    }
+    .card:hover{transform:translateY(-2px)}
+    .c-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .c-name{font-weight:900;font-size:18px}
+    .count{font-size:12px;color:#0f5132;background:#ecfdf5;border:1px solid #bbf7d0;border-radius:999px;padding:2px 8px;font-weight:900}
+    .c-actions{display:flex;gap:6px;margin-top:6px}
+    .icon-btn{border:1px solid var(--ring);background:#fff;border-radius:10px;padding:6px 8px;cursor:pointer}
+    .icon-btn.danger{color:#7f1d1d;border-color:#fecaca;background:#fff5f5}
+    .open{margin-top:6px}
+
+    .empty{border:1px dashed var(--ring);padding:20px;border-radius:14px;background:#fff;text-align:center;color:var(--muted);font-weight:800}
+
+    /* modal */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+    .modal{width:min(520px,96vw);background:#fff;border:1px solid var(--ring);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+    .m-head{padding:12px 14px;border-bottom:1px solid var(--ring);font-weight:900}
+    .m-body{padding:14px;display:grid;gap:10px}
+    .m-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px;border-top:1px solid var(--ring);background:#fbfefb}
+    label{font-size:12px;text-transform:uppercase;letter-spacing:.25px;color:#6b7a73;font-weight:900}
+    select.input{appearance:auto}
+    .notice{color:#065f46;background:#ecfdf5;border:1px solid #bbf7d0;padding:8px 10px;border-radius:10px;font-weight:800}
+    .danger{color:#7f1d1d;background:#fef2f2;border:1px solid #fee2e2}
+
+    .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 14px;border-radius:12px;font-weight:900;display:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <a class="back" href="admin.html">⬅️ Tableau de bord</a>
+      <h1 class="title">Classes</h1>
+      <div class="actions">
+        <button id="btnSync" class="btn">↻ Synchroniser</button>
+        <button id="btnAdd" class="btn primary">➕ Nouvelle classe</button>
+      </div>
+    </div>
+
+    <div class="search">
+      <input id="q" class="input" type="search" placeholder="Rechercher une classe…" />
+    </div>
+
+    <div id="list" class="grid"></div>
+    <div id="empty" class="empty" style="display:none;">Aucune classe pour le moment. Crée ta première classe avec “Nouvelle classe”.</div>
+  </div>
+
+  <!-- Modals -->
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div id="modalTitle" class="m-head">Nouvelle classe</div>
+      <div class="m-body" id="modalBody"></div>
+      <div class="m-actions">
+        <button class="btn" id="cancel">Annuler</button>
+        <button class="btn primary" id="confirm">Valider</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+
+/* ===== SAFE STORAGE (LS) — fallback mémoire si stockage bloqué + bridge de session ===== */
+const LS = (()=>{
+  try{
+    const t='__probe__';
+    window.LS.setItem(t,'1');
+    window.LS.removeItem(t);
+    return window.localStorage; // OK : stockage natif
+  }catch(e){
+    // Fallback mémoire (par onglet)
+    const mem = new Map();
+    return {
+      getItem: (k)=> mem.has(k) ? mem.get(k) : null,
+      setItem: (k,v)=> { mem.set(k, String(v)); },
+      removeItem: (k)=> { mem.delete(k); },
+      clear: ()=> { mem.clear(); },
+      key: (i)=> Array.from(mem.keys())[i] || null,
+      get length(){ return mem.size; }
+    };
+  }
+})();
+
+// Bridge session: si adminSession absente car stockage verrouillé, la récupérer depuis window.name (QUIZSESS:...)
+(function(){
+  try{
+    const KEY='adminSession';
+    const hasSess = (sessionStorage.getItem(KEY) || (typeof localStorage!=='undefined' && LS.getItem(KEY)) || LS.getItem(KEY));
+    if(!hasSess && window.name && window.name.startsWith('QUIZSESS:')){
+      const raw = window.name.slice(9);
+      try{ sessionStorage.setItem(KEY, raw); }catch(e){ try{ LS.setItem(KEY, raw); }catch(e2){} }
+    }
+  }catch(e){ /* ignore */ }
+})();
+
+(function(){
+  const KEY   = 'adminSession';
+  const STEP  = 15000;             // vérif toutes les 15s
+  const IDLE  = 60 * 60 * 1000;    // 1h
+
+  function getSess(){
+    try{
+      const raw = sessionStorage.getItem(KEY) || LS.getItem(KEY); // compat ancien code
+      if(!raw) return null;
+      const s = JSON.parse(raw);
+      if(!s || !s.user) return null;
+      return s;
+    }catch(e){ return null; }
+  }
+  function saveSess(s){
+    try{ sessionStorage.setItem(KEY, JSON.stringify(s)); }catch(e){}
+  }
+  function redirectLogin(){
+    try { sessionStorage.removeItem(KEY); } catch(e){}
+    window.location.replace('index.html');
+  }
+  function bump(){                        // prolonge la session de 1h
+    const s = getSess();
+    if(!s) { redirectLogin(); return; }
+    s.until = Date.now() + IDLE;
+    saveSess(s);
+  }
+  function check(){                       // coupe si inactif > 1h
+    const s = getSess();
+    if(!s || !s.until || s.until <= Date.now()){
+      redirectLogin();
+    }
+  }
+
+  // Prolonge à la moindre activité utile
+  const EVENTS = ['click','keydown','mousemove','touchstart','focus'];
+  EVENTS.forEach(ev => window.addEventListener(ev, bump, {passive:true}));
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) bump(); }, {passive:true});
+
+  // Démarrage : prolonge immédiatement puis vérifie périodiquement
+  bump();
+  setInterval(check, STEP);
+})();
+
+    // ===== data layer =====
+    const LS_CLASSES = 'classes';
+    const LS_STUDENTS = 'students';
+
+    function uniq(arr){ return Array.from(new Set(arr)).filter(Boolean); }
+    function loadStudents(){
+      // Migration depuis studentsByClass si présent
+      const legacy = JSON.parse(LS.getItem('studentsByClass') || 'null');
+      if(legacy && typeof legacy==='object'){
+        const merged = [];
+        Object.entries(legacy).forEach(([cls, names])=>{
+          (names||[]).forEach(n=>{
+            merged.push({name:n, classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString()});
+          });
+        });
+        const exist = JSON.parse(LS.getItem(LS_STUDENTS) || '[]');
+        const all = [...exist, ...merged];
+        LS.setItem(LS_STUDENTS, JSON.stringify(all));
+        LS.removeItem('studentsByClass');
+      }
+      return JSON.parse(LS.getItem(LS_STUDENTS) || '[]');
+    }
+    function saveStudents(arr){ LS.setItem(LS_STUDENTS, JSON.stringify(arr||[])); }
+
+    function loadClasses(){
+      let cls = JSON.parse(LS.getItem(LS_CLASSES) || 'null');
+      if(!Array.isArray(cls)) cls = [];
+      // sync avec classes présentes dans students
+      const fromStudents = uniq(loadStudents().map(s=>s.classe).filter(c=>!!c));
+      cls = uniq([...cls, ...fromStudents]);
+      LS.setItem(LS_CLASSES, JSON.stringify(cls));
+      return cls;
+    }
+    function saveClasses(arr){ LS.setItem(LS_CLASSES, JSON.stringify(arr||[])); }
+
+    // ===== UI =====
+    const $  = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const list = $('#list'), empty = $('#empty'), q = $('#q');
+    const overlay = $('#overlay'), modalTitle = $('#modalTitle'), modalBody = $('#modalBody'), confirmBtn = $('#confirm'), cancelBtn = $('#cancel');
+    const toastEl = $('#toast');
+
+    let CLASSES = loadClasses();
+    let STUDENTS = loadStudents();
+
+    function toast(msg){
+      toastEl.textContent = msg; toastEl.style.display='block';
+      setTimeout(()=> toastEl.style.display='none', 1600);
+    }
+
+    function countInClass(c){ return STUDENTS.filter(s=>s.classe===c).length; }
+
+    function render(){
+      CLASSES = loadClasses();
+      STUDENTS = loadStudents();
+      const term = (q.value||'').toLowerCase().trim();
+
+      list.innerHTML = '';
+      const filtered = CLASSES.filter(c => c.toLowerCase().includes(term));
+      filtered.forEach(c=>{
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="c-head">
+            <div class="c-name">${c}</div>
+            <span class="count">${countInClass(c)} élève(s)</span>
+          </div>
+          <div class="c-actions">
+            <button class="icon-btn" data-act="rename" data-class="${c}" title="Renommer">✏️</button>
+            <button class="icon-btn danger" data-act="delete" data-class="${c}" title="Supprimer">🗑️</button>
+          </div>
+          <a class="back open" href="eleves.html?classe=${encodeURIComponent(c)}">Ouvrir →</a>
+        `;
+        list.appendChild(card);
+      });
+
+      empty.style.display = filtered.length ? 'none' : 'block';
+    }
+
+    q.addEventListener('input', render);
+    $('#btnSync').addEventListener('click', ()=>{
+      // resynchronise la liste avec students
+      const fromStudents = uniq(loadStudents().map(s=>s.classe).filter(Boolean));
+      saveClasses(uniq([...loadClasses(), ...fromStudents]));
+      toast('Synchronisé avec les élèves');
+      render();
+    });
+
+    $('#btnAdd').addEventListener('click', ()=> openAddModal());
+    list.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-act]');
+      if(!btn) return;
+      const cls = btn.getAttribute('data-class');
+      if(btn.dataset.act==='rename') openRenameModal(cls);
+      if(btn.dataset.act==='delete') openDeleteModal(cls);
+    });
+
+    // ===== Modals =====
+    let modalResolve = null, modalAction = null, modalData = null;
+    function openModal(title, bodyHtml, action, data, confirmLabel='Valider'){
+      modalTitle.textContent = title;
+      modalBody.innerHTML = bodyHtml;
+      modalAction = action; modalData = data;
+      confirmBtn.textContent = confirmLabel;
+      overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false');
+      setTimeout(()=> modalBody.querySelector('input,select')?.focus(), 0);
+    }
+    function closeModal(){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); modalAction=null; modalData=null; }
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+    confirmBtn.addEventListener('click', ()=>{
+      if(typeof modalAction==='function') modalAction();
+    });
+
+    function openAddModal(){
+      openModal('Nouvelle classe', `
+        <label>Nom de la classe</label>
+        <input id="clsName" class="input" placeholder="Ex : 5A" />
+      `, ()=>{
+        const name = ($('#clsName').value||'').trim();
+        if(!name){ toast('Nom invalide'); return; }
+        const exists = loadClasses().some(c=>c.toLowerCase()===name.toLowerCase());
+        if(exists){ toast('Classe déjà existante'); return; }
+        saveClasses([...loadClasses(), name]);
+        toast('Classe créée'); closeModal(); render();
+      }, null, 'Créer');
+    }
+
+    function openRenameModal(cls){
+      openModal('Renommer la classe', `
+        <label>Nouveau nom</label>
+        <input id="clsNew" class="input" value="${cls}" />
+        <div class="notice">Les élèves de “${cls}” seront automatiquement rattachés à la nouvelle classe.</div>
+      `, ()=>{
+        const nv = ($('#clsNew').value||'').trim();
+        if(!nv){ toast('Nom invalide'); return; }
+        if(nv===cls){ closeModal(); return; }
+        const classes = loadClasses();
+        if(classes.some(c=>c.toLowerCase()===nv.toLowerCase())){ toast('Ce nom existe déjà'); return; }
+        // update classes
+        const idx = classes.indexOf(cls); if(idx>=0) classes[idx]=nv; saveClasses(classes);
+        // update students
+        const st = loadStudents().map(s => s.classe===cls ? {...s, classe:nv} : s);
+        saveStudents(st);
+        toast('Classe renommée'); closeModal(); render();
+      }, null, 'Renommer');
+    }
+
+    function openDeleteModal(cls){
+      const other = loadClasses().filter(c=>c!==cls);
+      openModal('Supprimer la classe', `
+        <div class="danger">Cette action ne supprime pas les données, mais vous devez choisir quoi faire des élèves.</div>
+        <label>Action pour les élèves de “${cls}”</label>
+        <select id="delAction" class="input">
+          <option value="move">Les déplacer vers…</option>
+          <option value="mark">Les marquer “Inconnue”</option>
+        </select>
+        <div id="targetWrap">
+          <label>Destination</label>
+          <select id="target" class="input">
+            ${other.map(c=>`<option value="${c}">${c}</option>`).join('')}
+          </select>
+        </div>
+      `, ()=>{
+        const action = $('#delAction').value;
+        const classes = loadClasses().filter(c=>c!==cls);
+        let st = loadStudents();
+        if(action==='move'){
+          const target = $('#target')?.value;
+          if(!target){ toast('Choisis une destination'); return; }
+          st = st.map(s => s.classe===cls ? {...s, classe:target} : s);
+        } else {
+          st = st.map(s => s.classe===cls ? {...s, classe:'Inconnue'} : s);
+          if(!classes.includes('Inconnue')) classes.push('Inconnue');
+        }
+        saveStudents(st); saveClasses(classes);
+        toast('Classe supprimée'); closeModal(); render();
+      }, null, 'Supprimer');
+      // toggle destination select
+      modalBody.querySelector('#delAction').addEventListener('change', (e)=>{
+        modalBody.querySelector('#targetWrap').style.display = e.target.value==='move' ? 'block' : 'none';
+      });
+      modalBody.querySelector('#targetWrap').style.display = other.length ? 'block' : 'none';
+    }
+
+    // init
+    render();
+  </script>
+</body>
+</html>
