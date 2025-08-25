@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connexion — Administration</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root{
+      --bg1:#f7faff; --bg2:#eef2ff; --card:#ffffff; --text:#0f172a; --muted:#64748b; --line:#e6eaf3;
+      --accent:#6366f1; --ok:#16a34a; --bad:#ef4444;
+    }
+    @media (prefers-color-scheme: dark){
+      :root{ --bg1:#0b1224; --bg2:#0b1530; --card:#0e162a; --text:#e6edff; --muted:#9aa4c7; --line:#1e2740; --accent:#7c91ff; }
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0; min-height:100vh; font-family:ui-sans-serif,system-ui,-apple-system,"SF Pro Display","Segoe UI",Roboto,Arial;
+      background: radial-gradient(1000px 500px at 10% -10%, var(--bg2), transparent 60%), linear-gradient(180deg, var(--bg1), var(--bg2));
+      color:var(--text);
+    }
+    .wrap{max-width:460px;margin:6vh auto;padding:0 16px}
+    .card{background:linear-gradient(180deg,#fff, #f8faff); border:1px solid var(--line); border-radius:18px; box-shadow:0 18px 40px rgba(2,6,23,.10); padding:18px}
+    @media (prefers-color-scheme: dark){ .card{background:linear-gradient(180deg,#121a31,#0e162a);}}
+    h1{margin:0 0 6px; font-size:26px; letter-spacing:.2px}
+    .sub{color:var(--muted); margin-bottom:12px}
+    label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.25px; color:var(--muted); font-weight:900; margin:8px 0 6px}
+    input{width:100%; padding:12px; border:1px solid var(--line); border-radius:12px; background:#fff; font-weight:800}
+    @media (prefers-color-scheme: dark){ input{background:#0e162a; color:var(--text);}}
+    .row{display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap}
+    .btn{cursor:pointer; border:1px solid var(--line); padding:12px 14px; border-radius:12px; font-weight:900;
+         background:linear-gradient(180deg,#fff,#f7f8ff);}
+    @media (prefers-color-scheme: dark){ .btn{background:linear-gradient(180deg,#141c33,#0e162a);}}
+    .btn.primary{background:linear-gradient(135deg,#a5b4fc,#93c5fd); border-color:transparent; color:#0b1634}
+    .btn.ghost{background:transparent}
+    .note{font-size:12px; color:var(--muted); margin-top:10px}
+    .msg{display:none; margin-top:10px; font-weight:800; padding:8px 10px; border-radius:10px}
+    .msg.err{display:block; color:#7f1d1d; background:#fef2f2; border:1px solid #fee2e2}
+    .msg.ok{display:block; color:#065f46; background:#ecfdf5; border:1px solid #bbf7d0}
+    .tiny{font-size:11px; color:var(--muted); text-align:center; margin-top:10px}
+    .hint{font-size:11px; color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Connexion</h1>
+      <div class="sub">Accès à l’administration</div>
+
+      <!-- SETUP (première fois sur cette machine) -->
+      <div id="setup" style="display:none">
+        <label>Créer un code (6–32 caractères)</label>
+        <input id="newPass" type="password" autocomplete="new-password" placeholder="Choisissez un code" />
+        <div class="row">
+          <button id="createBtn" class="btn primary">Créer le code</button>
+          <button id="createKeyBtn" class="btn">Créer une clé portable (.quizkey)</button>
+          <button id="skipBtn" class="btn ghost" title="Session temporaire (sans stockage)">Invité</button>
+        </div>
+        <div class="note">Si le stockage du navigateur est verrouillé, utilisez la <b>clé portable</b> : un petit fichier que vous pourrez importer pour vous connecter, même sur un poste bloqué.</div>
+      </div>
+
+      <!-- LOGIN (code déjà enregistré ou clé portable) -->
+      <div id="login" style="display:none">
+        <label>Code</label>
+        <input id="pass" type="password" autocomplete="current-password" placeholder="Votre code" />
+        <div class="row">
+          <button id="loginBtn" class="btn primary">Se connecter</button>
+          <button id="guestBtn" class="btn ghost" title="Session temporaire (sans stockage)">Invité</button>
+        </div>
+
+        <div class="note" style="margin-top:8px">
+          <div><b>Ou</b> importer une clé portable :</div>
+          <div class="row">
+            <input id="keyFile" type="file" accept=".quizkey,application/json" />
+            <button id="keyLoginBtn" class="btn" disabled>Se connecter avec la clé</button>
+          </div>
+          <div class="hint">Astuce : maintenez <b>Shift</b> en cliquant “Se connecter” pour <i>forcer</i> une session même si le stockage est bloqué (session limitée à l’onglet).</div>
+        </div>
+      </div>
+
+      <div id="messages" class="msg"></div>
+
+      <details style="margin-top:14px">
+        <summary>Options</summary>
+        <div class="row" style="margin-top:10px">
+          <button id="forgetBtn" class="btn">Supprimer le code local</button>
+          <button id="healthBtn" class="btn">Vérifier le stockage</button>
+        </div>
+        <div class="tiny">Supprimer le code ne touche pas vos données (élèves, quiz…). Vous pourrez recréer un code ou utiliser une clé portable.</div>
+      </details>
+    </div>
+    <div class="tiny">💾 Données locales – totalement hors-ligne</div>
+  </div>
+
+  <script>
+    /* ===== Helpers UI / hash ===== */
+    const $ = s => document.querySelector(s);
+    const msgBox = $('#messages');
+    function show(type, text){
+      msgBox.className = 'msg ' + (type||''); msgBox.textContent = text || ''; msgBox.style.display = text ? 'block' : 'none';
+    }
+    function b64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+    async function sha256(str){
+      try{
+        const enc = new TextEncoder().encode(str);
+        if (window.crypto?.subtle?.digest){
+          const h = await crypto.subtle.digest('SHA-256', enc);
+          return 'sha256:' + b64(h);
+        }
+      }catch(e){}
+      // Fallback (faible) si crypto indisponible
+      return 'plain:' + str;
+    }
+
+    /* ===== Stockage Auth: localStorage -> IndexedDB (fallback) ===== */
+    const AUTH_DB='quizAuth', AUTH_STORE='kv';
+    function openAuthDB(){
+      return new Promise(res=>{
+        try{
+          if(!('indexedDB' in window)) return res(null);
+          const r=indexedDB.open(AUTH_DB,1);
+          r.onupgradeneeded=()=>{ const db=r.result; if(!db.objectStoreNames.contains(AUTH_STORE)) db.createObjectStore(AUTH_STORE,{keyPath:'k'}); };
+          r.onsuccess=()=>res(r.result); r.onerror=()=>res(null);
+        }catch{ res(null); }
+      });
+    }
+    async function idbGet(k){
+      const db=await openAuthDB(); if(!db) return null;
+      return new Promise(ok=>{ const tx=db.transaction(AUTH_STORE,'readonly'); const st=tx.objectStore(AUTH_STORE);
+        const rq=st.get(k); rq.onsuccess=()=>ok(rq.result?rq.result.v:null); rq.onerror=()=>ok(null); });
+    }
+    async function idbSet(k,v){
+      const db=await openAuthDB(); if(!db) return false;
+      return new Promise(ok=>{ const tx=db.transaction(AUTH_STORE,'readwrite'); const st=tx.objectStore(AUTH_STORE);
+        const rq=st.put({k,v}); rq.onsuccess=()=>ok(true); rq.onerror=()=>ok(false); });
+    }
+    async function getAuth(k){
+      try{ const v=localStorage.getItem(k); if(v!=null) return v; }catch{}
+      return await idbGet(k);
+    }
+    async function setAuth(k,v){
+      let ok=false;
+      try{ localStorage.setItem(k,v); ok=true; }catch{}
+      if(!ok) ok=await idbSet(k,v);
+      return ok;
+    }
+
+    /* ===== Session: sessionStorage -> localStorage -> window.name ===== */
+    function setSession(user, hours){
+      const until = Date.now() + (hours||2)*3600*1000;
+      const sess = JSON.stringify({user, until});
+      let ok=false;
+      try{ sessionStorage.setItem('adminSession', sess); ok=true; }catch{}
+      if(!ok){ try{ localStorage.setItem('adminSession', sess); ok=true; }catch{} }
+      if(!ok){ try{ window.name='QUIZSESS:'+sess; ok=true; }catch{} }
+      return ok;
+    }
+
+    /* ===== Clé portable ===== */
+    function downloadKeyFile(hash){
+      const data = { type:'quiz-key', v:2, hash, createdAt:new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'quiz_admin_key.quizkey';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(a.href);
+    }
+
+    let importedKeyHash = null;
+    $('#keyFile').addEventListener('change', async (e)=>{
+      importedKeyHash = null;
+      $('#keyLoginBtn').disabled = true;
+      const f = e.target.files?.[0];
+      if(!f){ show('err','Aucun fichier sélectionné.'); return; }
+      try{
+        const txt = await f.text();
+        const data = JSON.parse(txt);
+        if(data && (data.type==='quiz-key') && data.hash){
+          importedKeyHash = String(data.hash);
+          $('#keyLoginBtn').disabled = false;
+          show('ok','Clé portable chargée. Vous pouvez vous connecter avec la clé.');
+        }else{
+          show('err','Fichier de clé invalide.');
+        }
+      }catch(err){
+        show('err','Impossible de lire le fichier de clé.');
+      }
+    });
+
+    $('#keyLoginBtn').addEventListener('click', ()=>{
+      if(!importedKeyHash){ show('err','Chargez une clé portable d’abord.'); return; }
+      if(!setSession('Admin', 8)){ show('err','Session bloquée par le navigateur.'); return; }
+      location.replace('admin.html');
+    });
+
+    /* ===== État / affichage initial ===== */
+    const KEY='ADMIN_PASS_V2';
+    (async ()=>{
+      const saved = await getAuth(KEY);
+      if (!saved) { document.getElementById('setup').style.display='block'; }
+      else        { document.getElementById('login').style.display='block'; }
+    })();
+
+    /* ===== Actions ===== */
+    document.getElementById('createBtn').addEventListener('click', async ()=>{
+      show('', '');
+      const pw = (document.getElementById('newPass').value||'').trim();
+      if (pw.length < 6) { show('err','Code trop court.'); return; }
+      const hash = await sha256(pw);
+      if (!await setAuth(KEY, hash)) {
+        // Stockage bloqué : proposer la clé portable + session immédiate
+        downloadKeyFile(hash);
+        if (!setSession('Admin', 8)) {
+          show('err','Stockage verrouillé. Utilisez la clé portable via “Se connecter avec la clé”.');
+          return;
+        }
+        show('ok','Clé portable créée. Session ouverte.');
+        location.replace('admin.html');
+        return;
+      }
+      if (!setSession('Admin', 8)) { show('err','Session bloquée par le navigateur.'); return; }
+      show('ok','Code créé. Redirection…');
+      location.replace('admin.html');
+    });
+
+    document.getElementById('createKeyBtn').addEventListener('click', async ()=>{
+      show('', '');
+      const pw = (document.getElementById('newPass').value||'').trim();
+      if (pw.length < 6) { show('err','Code trop court.'); return; }
+      const hash = await sha256(pw);
+      downloadKeyFile(hash);
+      // Tente aussi d’ouvrir une session pour travailler tout de suite
+      if (!setSession('Admin', 8)) {
+        show('ok','Clé portable créée. Importez-la ensuite via “Se connecter avec la clé”.');
+        return;
+      }
+      location.replace('admin.html');
+    });
+
+    document.getElementById('skipBtn').addEventListener('click', ()=>{
+      if (!setSession('Invité', 2)) { show('err','Session bloquée.'); return; }
+      location.replace('admin.html');
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', async (e)=>{
+      show('', '');
+      const force = e.shiftKey; // SHIFT = forcer même si stockage KO
+      const pw = (document.getElementById('pass').value||'').trim();
+      if (!pw) { show('err','Saisissez votre code.'); return; }
+      const hash = await sha256(pw);
+      const ref  = await getAuth(KEY);
+      if (!ref){
+        show('err','Aucun code local trouvé. Importez une clé portable ou créez un code.');
+        return;
+      }
+      if (hash !== ref){ show('err','Code incorrect.'); return; }
+      const ok = setSession('Admin', 8);
+      if (!ok && !force){ show('err','Session bloquée. Maintenez SHIFT et cliquez pour forcer (session limitée à l’onglet).'); return; }
+      if (!ok && force){ try{ window.name='QUIZSESS:'+JSON.stringify({user:'Admin', until: Date.now()+2*3600*1000}); }catch{} }
+      location.replace('admin.html');
+    });
+
+    document.getElementById('guestBtn').addEventListener('click', ()=>{
+      if (!setSession('Invité', 2)) { show('err','Session bloquée.'); return; }
+      location.replace('admin.html');
+    });
+
+    document.getElementById('forgetBtn').addEventListener('click', async ()=>{
+      const ok = confirm('Supprimer le code enregistré sur CET ordinateur ?');
+      if(!ok) return;
+      try{ localStorage.removeItem(KEY); }catch(e){}
+      const db=await openAuthDB(); if(db){ try{ const tx=db.transaction(AUTH_STORE,'readwrite'); tx.objectStore(AUTH_STORE).delete(KEY); }catch(e){} }
+      show('ok','Code supprimé localement. Vous pouvez en recréer un ou utiliser une clé portable.');
+      document.getElementById('login').style.display='none';
+      document.getElementById('setup').style.display='block';
+    });
+
+    document.getElementById('healthBtn').addEventListener('click', async ()=>{
+      let txt = 'Vérification… ';
+      try{ const k='__probe__'+Math.random().toString(36).slice(2); localStorage.setItem(k,'ok'); const ok=localStorage.getItem(k)==='ok'; localStorage.removeItem(k); txt += ok ? '✅ localStorage OK. ' : '⚠️ localStorage KO. '; }catch(e){ txt += '⚠️ localStorage bloqué. '; }
+      try{ sessionStorage.setItem('__probe__','ok'); const ok=sessionStorage.getItem('__probe__')==='ok'; sessionStorage.removeItem('__probe__'); txt += ok ? '✅ sessionStorage OK. ' : '⚠️ sessionStorage KO. '; }catch(e){ txt += '⚠️ sessionStorage bloqué. '; }
+      const idb = await openAuthDB(); txt += idb ? '✅ IndexedDB OK. ' : '⚠️ IndexedDB indisponible. ';
+      txt += (window.crypto?.subtle?.digest ? '✅ crypto OK.' : '⚠️ crypto indisponible (fallback activé).');
+      show('ok', txt);
+    });
+  </script>
+</body>
+</html>
