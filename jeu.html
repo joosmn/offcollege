@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jeu en Direct</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    :root{
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --text: #1f2937;
+      --accent: #c084fc;
+      --accent2:#60a5fa;
+      --good: #22c55e;
+      --bad:  #ef4444;
+      --gold: #f59e0b;
+      --chip: #fdf2f8;
+      --chip-border:#d946ef;
+      --ring:#e9ecff;
+      --danger:#991b1b;
+
+      /* couleurs Team vs Team */
+      --teamA: #10b981; /* vert */
+      --teamA2:#34d399;
+      --teamB: #3b82f6; /* bleu */
+      --teamB2:#60a5fa;
+    }
+
+    *{ box-sizing: border-box; }
+    html, body{
+      margin:0; padding:0; background: var(--bg);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      color: var(--text);
+    }
+
+    .container{ max-width: 1200px; margin: 28px auto; padding: 0 16px; }
+
+    .header{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+    .page-title{ margin:0; font-size:26px; font-weight: 900; letter-spacing:.2px; }
+    .subhead{ color: var(--muted); }
+
+    .toolbar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:14px 0 18px; }
+    .chrono{
+      font-variant-numeric: tabular-nums; font-weight:800;
+      padding:8px 14px; border-radius:999px; background:#eef2ff; color:#3730a3;
+    }
+    .btn{
+      border:0; border-radius:12px; padding:10px 14px; cursor:pointer; font-weight:700;
+      background: linear-gradient(135deg, var(--accent), var(--accent2)); color:#fff;
+    }
+    .btn.secondary{ background:#e5e7eb; color:#111827; }
+
+    /* ======= QUIZ (design) ======= */
+    .quiz-wrapper{ max-width: 860px; margin: 18px auto 22px; }
+    .quiz-card{
+      position: relative; overflow: hidden; border-radius: 18px; background: #ffffff;
+      border: 1px solid #e8e6ff; box-shadow: 0 14px 30px rgba(80, 56, 200, .12);
+    }
+    .quiz-head{
+      position: relative; padding: 18px 18px 16px;
+      background:
+        radial-gradient(1200px 160px at 10% 0%, #f2f0ff 0%, rgba(242,240,255,0) 60%),
+        radial-gradient(1400px 200px at 100% 0%, #e9f4ff 0%, rgba(233,244,255,0) 60%),
+        linear-gradient(180deg, #f9fbff 0%, #ffffff 100%);
+      border-bottom: 1px solid #efeefe;
+    }
+    .quiz-title{ margin:0; font-size:22px; font-weight:900; letter-spacing:.2px; color:#1f2a44; display:flex; align-items:center; gap:10px; }
+    .quiz-title .emoji{ font-size:22px; }
+    .quiz-meta{ margin-top:6px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .theme-chip{
+      display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:800;
+      color:#0f3d60; background:#e8f3ff; border:1px solid #d7e9ff;
+    }
+    .theme-chip .dot{ width:8px; height:8px; border-radius:50%; background:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,.2); }
+
+    .quiz-body{ padding:18px; }
+    .quiz-question{ font-size:20px; font-weight:800; color:#262b3c; line-height:1.35; margin:0 0 14px; }
+    .quiz-media{ margin:10px 0 14px; border-radius:12px; overflow:hidden; border:1px solid #eee; box-shadow:0 6px 16px rgba(0,0,0,.06); }
+    .quiz-media img{ display:block; width:100%; height:auto; }
+
+    .quiz-answer{
+      margin-top:12px; border-radius:14px; border:1px dashed #d9d5ff;
+      background: linear-gradient(180deg, #fcfbff 0%, #ffffff 100%);
+      padding:14px 16px; color:#2b285a; font-weight:700;
+      display:none; opacity:0; transform: translateY(6px);
+      transition: opacity .28s ease, transform .28s ease;
+    }
+    .quiz-answer.visible{ display:block; opacity:1; transform: translateY(0); }
+
+    .quiz-actions{ margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+    .qbtn{
+      border:0; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer; color:#fff;
+      background: linear-gradient(135deg, #a78bfa, #60a5fa); box-shadow: 0 10px 18px rgba(96,165,250,.24);
+    }
+    .qbtn.ghost{ background:#eef2ff; color:#1e2a5c; box-shadow:none; border:1px solid #dee3ff; }
+
+    /* Bandeau modes */
+    .mode-banner{
+      margin-top:4px;
+      background:
+        radial-gradient(1000px 160px at 0% -10%, #f3f4ff, transparent 60%),
+        radial-gradient(1000px 160px at 100% -10%, #ffeef7, transparent 60%),
+        #fff;
+      border:1px solid var(--ring);
+      border-radius: 16px;
+      padding: 10px 12px;
+      display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+      box-shadow: 0 10px 22px rgba(60, 64, 180, .08);
+    }
+    .mode-badge{
+      display:inline-flex; align-items:center; gap:8px;
+      background:#ffffff; border:1px solid #e9d5ff; color:#4c1d95;
+      padding:6px 10px; border-radius:999px; font-weight:900; font-size:12px;
+      box-shadow:0 6px 16px rgba(76,29,149,.08);
+    }
+    .mode-chip{
+      display:inline-flex; align-items:center; gap:6px;
+      border-radius:999px; padding:6px 10px; font-size:12px; font-weight:800; letter-spacing:.2px;
+      background:#fafaff; border:1px solid #e8e6ff; color:#1e2a5c;
+    }
+    .chip-ko{ background:#fff5f5; border-color:#ffe1e1; color:#991b1b; }
+    .chip-survie{ background:#effdf5; border-color:#d1fae5; color:#065f46; }
+    .chip-mystere{ background:#f5f3ff; border-color:#e9d5ff; color:#5b21b6; }
+    .chip-joker{ background:#fff7ed; border-color:#fed7aa; color:#9a3412; }
+    .chip-duel{ background:#eef2ff; border-color:#dbe2ff; color:#1e2a5c; }
+    .chip-steal{ background:#fff7ed; border-color:#ffe4c7; color:#7c2d12; }
+    .chip-teamvs{ background:#ecfeff; border-color:#bae6fd; color:#0c4a6e; }
+    .mode-actions{ margin-left:auto; display:flex; align-items:center; gap:8px; }
+    .link-clean{
+      border:1px solid #e6e9ff; background:linear-gradient(180deg,#fff,#f8faff);
+      padding:8px 12px; border-radius:12px; font-weight:900; cursor:pointer; font-size:12px;
+    }
+
+    /* Règles */
+    .rules-panel{
+      margin-top:10px; display:none;
+      border:1px solid var(--ring); border-radius:16px; overflow:hidden;
+      background:
+        radial-gradient(1200px 220px at 0% -10%, rgba(236,237,255,.8), transparent 60%),
+        radial-gradient(1200px 220px at 100% -10%, rgba(255,236,243,.85), transparent 60%),
+        linear-gradient(180deg,#ffffff 0%, #fcfdff 100%);
+      box-shadow: 0 16px 34px rgba(80, 56, 200, .12);
+    }
+    .rules-head{ padding:12px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #eff2ff; }
+    .rules-head h4{ margin:0; font-size:14px; letter-spacing:.3px; color:#334155; text-transform:uppercase; font-weight:900; }
+    .rules-body{ display:grid; gap:10px; padding:12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .rule-card{ background:#fff; border:1px solid #eef1ff; border-radius:14px; padding:12px; box-shadow:0 8px 18px rgba(0,0,0,.06); }
+    .rule-title{ margin:0 0 6px; font-weight:900; color:#1f2a44; display:flex; align-items:center; gap:8px; }
+    .rule-desc{ margin:0; color:#475569; font-size:13px; line-height:1.4; }
+
+    /* Grille joueurs */
+    .player-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:14px; }
+
+    /* Cartes équipes */
+    .team-card{
+      position: relative; background: var(--card); border-radius: 18px;
+      padding: 16px 16px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.06);
+      transition: transform .2s ease, box-shadow .2s ease, filter .2s ease, opacity .2s ease;
+      border:2px solid transparent;
+    }
+    .team-card:hover{ transform: translateY(-2px); box-shadow: 0 10px 28px rgba(0,0,0,.08); }
+    .team-card.highlight{ outline: 3px solid #fcd34d; background:#fffaf0; }
+    .team-card.eliminated{ filter: grayscale(0.7); opacity: .55; }
+    .elim-ribbon{
+      position:absolute; top:10px; left:-12px; transform: rotate(-8deg);
+      background: #fee2e2; color: var(--danger);
+      border: 1px solid #fecaca; border-radius:10px;
+      font-weight:900; font-size:12px; padding:4px 10px; box-shadow:0 8px 18px rgba(0,0,0,.08);
+      display:none;
+    }
+    .team-card.eliminated .elim-ribbon{ display:block; }
+
+    .team-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+    .team-title{ font-size:18px; font-weight:900; }
+    .team-meta{ font-size:12px; color: var(--muted); margin-top:2px; }
+    .mode-badge-card{
+      font-size:11px; font-weight:900; color:#fff; padding:6px 10px; border-radius:999px;
+      box-shadow: 0 8px 16px rgba(0,0,0,.12); background: linear-gradient(135deg, #ff5f6d, #ffc371);
+      white-space: nowrap;
+    }
+    .mode-badge-card.solo{ background: linear-gradient(135deg, #4facfe, #00f2fe); }
+
+    /* Couleurs Team vs Team sur cartes + avatar */
+    .team-card.teamA{ border-color: rgba(16,185,129,.35); }
+    .team-card.teamB{ border-color: rgba(59,130,246,.35); }
+    .team-card.teamA .mode-badge-card{ background: linear-gradient(135deg,var(--teamA), var(--teamA2)); }
+    .team-card.teamB .mode-badge-card{ background: linear-gradient(135deg,var(--teamB), var(--teamB2)); }
+    .avatarA{ background: linear-gradient(135deg, var(--teamA2), var(--teamA)); }
+    .avatarB{ background: linear-gradient(135deg, var(--teamB2), var(--teamB)); }
+
+    /* Sous-cartes Duo */
+    .members{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .member{
+      position:relative; background:#fafafa; border:1px solid #eee; border-radius:14px;
+      padding: 38px 10px 44px 10px; min-height: 110px;
+    }
+    .avatar{
+      position:absolute; top:10px; right:10px; width:28px; height:28px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center; font-weight:900; font-size:13px; color:#fff;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+    }
+    .member-label{ font-size:13px; font-weight:800; margin-bottom:3px; opacity:.85; }
+    .pin-badge, .exclude-badge{
+      position:absolute; top:8px; left:8px; z-index:2; display:inline-flex; align-items:center; gap:6px; line-height:1;
+      font-size:11px; padding:3px 7px; border-radius:999px; pointer-events:none; box-shadow: 0 4px 10px rgba(0,0,0,.12);
+    }
+    .pin-badge{ background: rgba(255,215,0,.95); color:#5a4300; }
+    .pin-badge::before{ content:"📌"; }
+    .exclude-badge{ background: rgba(239,68,68,.96); color:#fff; left:62px; }
+    .exclude-badge::before{ content:"⛔"; }
+
+    .member-badges{
+      position:absolute; left:10px; right:10px; bottom:10px; display:flex; flex-wrap:wrap; gap:6px; max-height: 42px; overflow:hidden;
+    }
+    .member-badge{
+      display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px;
+      background: var(--chip); border:1.5px solid var(--chip-border); color:#9d174d; font-size:12px;
+      max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow: 0 2px 8px rgba(217,70,239,.12);
+    }
+    .member-badge .chip-icon{ font-size:14px; line-height:1; }
+
+    /* SOLO */
+    .solo .team-body{ display:flex; align-items:center; gap:12px; margin-top: 8px; }
+    .solo .avatar{ position: static; width:36px; height:36px; font-size:14px; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .solo.teamA .avatar{ background: linear-gradient(135deg, var(--teamA2), var(--teamA)); }
+    .solo.teamB .avatar{ background: linear-gradient(135deg, var(--teamB2), var(--teamB)); }
+    .solo .who{ flex:1; text-align:left; }
+    .solo .who .name{ font-weight:900; }
+    .solo .who .meta{ font-size:12px; color:var(--muted); }
+    .solo .icons{ display:flex; gap:6px; }
+    .solo .icons span{ font-size:16px; }
+
+    .meta-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px; }
+    .life-chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:900; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; }
+    .joker-chip{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:999px; font-size:12px; font-weight:900; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; }
+    .joker-armed{ background:#ffedd5; border-color:#fdba74; }
+
+    .duel-ribbon{
+      position:absolute; top:10px; right:-12px; transform: rotate(8deg);
+      background:#eef2ff; color:#1e2a5c; border:1px solid #dbe2ff; border-radius:10px;
+      font-weight:900; font-size:12px; padding:4px 10px; box-shadow:0 8px 18px rgba(0,0,0,.08);
+      display:none;
+    }
+    .team-card.in-duel .duel-ribbon{ display:block; }
+
+    .score{ margin-top: 10px; font-size: 28px; font-weight: 900; text-align:center; min-height: 34px; }
+    .actions{ display:flex; justify-content:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+    .act{ border:0; border-radius:10px; padding:8px 12px; font-weight:800; color:#fff; cursor:pointer; }
+    .act.plus{ background: var(--good); }
+    .act.minus{ background: var(--bad); }
+    .act.bonus{ background: var(--gold); color:#111; }
+    .act.joker{ background: linear-gradient(135deg,#fbbf24,#fb7185); color:#111; }
+
+    .act:disabled{ opacity:.5; cursor:not-allowed; }
+
+    /* ===== Team vs Team – Couleurs renforcées ===== */
+    .team-card.teamA{
+      border: 2px solid rgba(16,185,129,.55) !important;
+      box-shadow: 0 10px 28px rgba(16,185,129,.18);
+      background-image:
+        radial-gradient(500px 120px at -10% 0%, rgba(209,250,229,.60), transparent 60%),
+        linear-gradient(180deg,#ffffff,#f7fffb);
+    }
+    .team-card.teamB{
+      border: 2px solid rgba(59,130,246,.55) !important;
+      box-shadow: 0 10px 28px rgba(59,130,246,.18);
+      background-image:
+        radial-gradient(500px 120px at 110% 0%, rgba(219,234,254,.60), transparent 60%),
+        linear-gradient(180deg,#ffffff,#f7fbff);
+    }
+    /* Titre et badge sur la carte en couleur d’équipe */
+    .team-card.teamA .team-title{ color: var(--teamA); }
+    .team-card.teamB .team-title{ color: var(--teamB); }
+    .team-card.teamA .mode-badge-card{
+      background: linear-gradient(180deg, var(--teamA2), var(--teamA));
+      color:#043b2c; border: 0;
+    }
+    .team-card.teamB .mode-badge-card{
+      background: linear-gradient(180deg, var(--teamB2), var(--teamB));
+      color:#0b1f4d; border: 0;
+    }
+    .solo.teamA .who .name{ color: var(--teamA); }
+    .solo.teamB .who .name{ color: var(--teamB); }
+    .solo.teamA{ outline: 2px solid rgba(16,185,129,.35); outline-offset: 2px; }
+    .solo.teamB{ outline: 2px solid rgba(59,130,246,.35); outline-offset: 2px; }
+
+    /* Chips totaux équipe dans la barre des modes (créés par JS) */
+    #superA-chip{
+      background: rgba(209,250,229,.85) !important;
+      border: 1px solid rgba(16,185,129,.25) !important;
+      color:#065f46 !important; font-weight:900;
+    }
+    #superB-chip{
+      background: rgba(219,234,254,.85) !important;
+      border: 1px solid rgba(59,130,246,.25) !important;
+      color:#1e3a8a !important; font-weight:900;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="page-title" id="gameTitle">Jeu en direct</h1>
+      <div class="subhead" id="gameSubtitle"></div>
+
+      <div id="modeBanner" class="mode-banner" style="display:none;">
+        <span class="mode-badge" id="modeBadge">🎮 Mode</span>
+        <div id="modeChips" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+        <div class="mode-actions">
+          <button id="duelBtn" class="link-clean" type="button" style="display:none;">⚔️ Lancer un duel</button>
+          <button id="toggleRulesBtn" class="link-clean" type="button">📘 Règles du mode</button>
+        </div>
+      </div>
+
+      <div id="rulesPanel" class="rules-panel" style="display:none;">
+        <div class="rules-head"><h4>Règles du mode en cours</h4></div>
+        <div class="rules-body" id="rulesBody"></div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="chrono" id="chrono">00:00</div>
+      <button class="btn" onclick="startChrono()">⏱️ Lancer</button>
+      <button class="btn secondary" onclick="endGame()">🏁 Terminer</button>
+      <button class="btn secondary" onclick="window.location.href='admin.html'">⬅️ Retour</button>
+    </div>
+
+    <!-- QUIZ -->
+    <div class="quiz-wrapper" id="quizContainer" style="display:none;">
+      <div class="quiz-card">
+        <div class="quiz-head">
+          <h3 class="quiz-title"><span class="emoji">🧠</span><span id="quizTitleText">Titre du quiz</span></h3>
+          <div class="quiz-meta">
+            <span class="theme-chip" id="quizThemeChip"><span class="dot"></span><span id="quizThemeText">Thème</span></span>
+          </div>
+        </div>
+        <div class="quiz-body">
+          <div id="quizQuestion" class="quiz-question"></div>
+          <div id="quizMedia" class="quiz-media" style="display:none;"></div>
+          <div id="quizOptions" class="quiz-options"></div>
+          <div id="quizAnswer" class="quiz-answer"></div>
+          <div class="quiz-actions">
+            <button class="qbtn" onclick="showAnswer()">Afficher la réponse</button>
+            <button class="qbtn ghost" onclick="nextQuestion()">Question suivante</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOUEURS -->
+    <div class="player-grid" id="playerGrid"></div>
+  </div>
+
+  <script>
+    /* ========= Contexte ========= */
+    const params     = new URLSearchParams(window.location.search);
+    const subject    = params.get("subject");
+    const isDuo      = localStorage.getItem("modeDuo") === "true";
+    const teamsParam = params.get("teams");
+    const duoList    = JSON.parse(params.get("duos") || "[]");
+    const soloList   = JSON.parse(params.get("students") || "[]");
+    const teams      = teamsParam ? JSON.parse(teamsParam) : (isDuo ? duoList : soloList.map(n => [n]));
+
+    const nomPartie = localStorage.getItem("nomPartie") || "Partie sans nom";
+    document.getElementById("gameTitle").textContent   = "Jeu en direct";
+    document.getElementById("gameSubtitle").textContent = subject ? `📚 ${nomPartie} — ${subject}` : `📚 ${nomPartie}`;
+
+    const playerGrid   = document.getElementById("playerGrid");
+    const chronoDisplay= document.getElementById("chrono");
+    const allStudents  = JSON.parse(localStorage.getItem("students") || "[]");
+
+    function getStudent(name){ return allStudents.find(s => s.name === name) || {}; }
+    function getClasse(name){ const s = getStudent(name); return s.classe || "—"; }
+    function initials(str){ return (str||"").split(/\s+/).map(s=>s[0]||"").join("").slice(0,2).toUpperCase(); }
+    function escapeHtml(str){ return String(str||"").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[s])); }
+
+    /* ========= États ========= */
+    const savedModes = JSON.parse(localStorage.getItem('gameModes') || '{}');
+    const MODE = {
+      ko: !!savedModes.ko,
+      survie: !!savedModes.survie,
+      survieLives: Math.max(1, parseInt(savedModes.survieLives || 3, 10)),
+      mystere: !!savedModes.mystere,
+      joker: !!savedModes.joker,
+
+      duel:  !!savedModes.duel,
+      steal: !!savedModes.steal,
+      stealPts: Math.max(1, parseInt(savedModes.stealPts || savedModes.stealPoint || 1, 10)),
+      teamvs: !!savedModes.teamvs,
+      teamA:  (savedModes.teamA || "Équipe A"),
+      teamB:  (savedModes.teamB || "Équipe B"),
+    };
+
+    let scores = {};                 // teamKey => score
+    let cards  = {};                 // teamKey => DOM
+    let eliminated = {};             // teamKey => bool
+    let lives = {};                  // teamKey => number (si survie)
+    let jokerAvailable = {};         // teamKey => bool
+    let jokerArmed = {};             // teamKey => bool
+
+    // Vol de points
+    let lastWrongTeam = null;
+
+    // Équipe vs Équipe
+    let superOf = {};                // teamKey => 'A' | 'B'
+    let teamOf  = {};                // playerName => 'A' | 'B'   👈 nouveau (pour résultats)
+    let superScoreA = 0, superScoreB = 0;
+    let totalPlayersA = 0, totalPlayersB = 0; // pour la répartition finale
+
+    // Duel
+    let currentDuel = null;          // [teamKey1, teamKey2]
+
+    /* ========= UI Modes ========= */
+    const modeBanner  = document.getElementById('modeBanner');
+    const modeBadge   = document.getElementById('modeBadge');
+    const modeChips   = document.getElementById('modeChips');
+    const rulesPanel  = document.getElementById('rulesPanel');
+    const rulesBody   = document.getElementById('rulesBody');
+    const toggleRules = document.getElementById('toggleRulesBtn');
+    const duelBtn     = document.getElementById('duelBtn');
+
+    function buildModeUI(){
+      const hasAny = MODE.ko || MODE.survie || MODE.mystere || MODE.joker || MODE.duel || MODE.steal || MODE.teamvs;
+      const chips = [];
+      const rules = [];
+
+      if (!hasAny){
+        modeBadge.textContent = "🎮 Mode Classique";
+        chips.push(`<span class="mode-chip">Aucune règle spéciale</span>`);
+        rules.push({icon:"🎯", title:"Classique", desc:"Répondez correctement pour marquer des points. Le classement s’actualise en direct."});
+      } else {
+        modeBadge.textContent = "🎮 Mode activé";
+        if (MODE.ko){
+          chips.push(`<span class="mode-chip chip-ko">KO</span>`);
+          rules.push({icon:"🛑", title:"KO — élimination directe", desc:"Première mauvaise réponse ⇒ équipe éliminée (bouton -1)."});
+        }
+        if (MODE.survie){
+          chips.push(`<span class="mode-chip chip-survie">Survie · ${MODE.survieLives} vies</span>`);
+          rules.push({icon:"💚", title:"Survie", desc:`Chaque équipe démarre avec <b>${MODE.survieLives}</b> vies. Un -1 retire 1 vie. À 0, élimination.`});
+        }
+        if (MODE.mystere){
+          chips.push(`<span class="mode-chip chip-mystere">Mystère</span>`);
+          rules.push({icon:"🫥", title:"Mystère", desc:"Les scores sont cachés pendant la partie et révélés à la fin."});
+        }
+        if (MODE.joker){
+          chips.push(`<span class="mode-chip chip-joker">Joker ×2</span>`);
+          rules.push({icon:"🃏", title:"Joker", desc:"Chaque équipe peut armer un Joker pour doubler sa prochaine augmentation de score."});
+        }
+        if (MODE.duel){
+          chips.push(`<span class="mode-chip chip-duel">Duel</span>`);
+          rules.push({icon:"⚔️", title:"Duel", desc:"Lance un duel pour sélectionner 2 équipes au hasard. Seuls les duellistes peuvent scorer jusqu’à la fin du duel."});
+          duelBtn.style.display = "inline-flex";
+        } else {
+          duelBtn.style.display = "none";
+        }
+        if (MODE.steal){
+          chips.push(`<span class="mode-chip chip-steal">Vol de points · ${MODE.stealPts}</span>`);
+          rules.push({icon:"🪙", title:"Vol de points", desc:`Quand une équipe marque, si une autre vient d’être pénalisée par -1, elle lui vole <b>${MODE.stealPts}</b> point(s).`});
+        }
+        if (MODE.teamvs){
+          chips.push(`<span class="mode-chip chip-teamvs">${MODE.teamA} vs ${MODE.teamB}</span>`);
+          rules.push({icon:"🧩", title:"Équipe contre équipe", desc:`Toutes les équipes sont réparties en deux camps : <b>${MODE.teamA}</b> (vert) et <b>${MODE.teamB}</b> (bleu). À la fin, le total de chaque camp est divisé par le nombre de joueurs du camp et attribué à chaque joueur.`});
+        }
+      }
+
+      modeChips.innerHTML = chips.join("");
+      rulesBody.innerHTML = rules.map(r => `
+        <div class="rule-card"><div class="rule-title">${r.icon} ${r.title}</div><p class="rule-desc">${r.desc}</p></div>
+      `).join("");
+
+      modeBanner.style.display = "flex";
+      toggleRules.onclick = () => {
+        const visible = rulesPanel.style.display === "block";
+        rulesPanel.style.display = visible ? "none" : "block";
+        toggleRules.textContent = visible ? "📘 Règles du mode" : "📖 Masquer les règles";
+      };
+      duelBtn.onclick = startDuel;
+    }
+    buildModeUI();
+
+    /* ========= Construction des cartes ========= */
+    (teams || []).forEach((group, idx) => {
+      const members = Array.isArray(group) ? group : [group];
+      const teamKey = members.join(" + ");
+      scores[teamKey] = 0;
+      eliminated[teamKey] = false;
+
+      if (MODE.survie) lives[teamKey] = MODE.survieLives;
+      if (MODE.joker)  { jokerAvailable[teamKey] = true; jokerArmed[teamKey] = false; }
+
+      // Répartition Team vs Team
+      let teamClass = '';
+      if (MODE.teamvs){
+        const side = (idx % 2 === 0) ? 'A' : 'B';
+        superOf[teamKey] = side;
+        members.forEach(n => { teamOf[n] = side; });        // 👈 on mémorise le côté de chaque joueur
+        if (side === 'A'){ totalPlayersA += members.length; teamClass = 'teamA'; }
+        else { totalPlayersB += members.length; teamClass = 'teamB'; }
+      }
+
+      const isDuoCard = members.length === 2;
+      const teamCard  = document.createElement("div");
+      teamCard.className = "team-card" + (isDuoCard ? "" : " solo") + (teamClass ? (" " + teamClass) : "");
+
+      const classesLine = members.map(n => getClasse(n)).join(" / ");
+      const head = `
+        <div class="team-head">
+          <div>
+            <div class="team-title">${escapeHtml(teamKey)}</div>
+            <div class="team-meta">${escapeHtml(classesLine)}</div>
+          </div>
+          <span class="mode-badge-card ${isDuoCard ? "" : "solo"}">${isDuoCard ? "DUO" : "SOLO"}</span>
+        </div>
+        <div class="elim-ribbon">Éliminé</div>
+        <div class="duel-ribbon">⚔️ Duel</div>
+      `;
+
+      let metaRow = '';
+      const chips = [];
+      if (MODE.survie) chips.push(`<span class="life-chip" id="life-${CSS.escape(teamKey)}">❤️ ${lives[teamKey]}</span>`);
+      if (MODE.joker)  chips.push(`<span class="joker-chip" id="joker-${CSS.escape(teamKey)}">🃏 Dispo</span>`);
+      if (MODE.teamvs) chips.push(`<span class="mode-chip chip-teamvs">${superOf[teamKey] === 'A' ? MODE.teamA : MODE.teamB}</span>`);
+      if (chips.length) metaRow = `<div class="meta-row">${chips.join("")}</div>`;
+
+      if (isDuoCard) {
+        const membersHtml = members.map(n => {
+          const s = getStudent(n);
+          const pinned   = !!s.pinned;
+          const excluded = !!s.excluded;
+          const badges   = Array.isArray(s.badges) ? s.badges : [];
+          const cls = getClasse(n);
+          const avClass = superOf[teamKey] === 'A' ? 'avatarA' : (superOf[teamKey] === 'B' ? 'avatarB' : '');
+
+          return `
+            <div class="member" data-player="${escapeHtml(n)}" title="${escapeHtml(n)}">
+              ${pinned   ? `<span class="pin-badge">Épinglé</span>` : ``}
+              ${excluded ? `<span class="exclude-badge">Exclu</span>` : ``}
+              <div class="avatar ${avClass}" aria-hidden="true">${initials(n)}</div>
+              <div class="member-label">${escapeHtml(cls)}</div>
+              <div class="member-badges">
+                ${badges.map(b => `<span class="member-badge" title="${escapeHtml(b)}"><span class="chip-icon">🏅</span>${escapeHtml(b)}</span>`).join("")}
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        teamCard.innerHTML = `
+          ${head}
+          ${metaRow}
+          <div class="members">${membersHtml}</div>
+          <div class="score" id="score-${CSS.escape(teamKey)}">0 pts</div>
+          <div class="actions" id="acts-${CSS.escape(teamKey)}">
+            <button class="act plus"  onclick="inc('${teamKey}', 1)">+1</button>
+            <button class="act minus" onclick="wrong('${teamKey}', -1)">-1</button>
+            <button class="act bonus" onclick="inc('${teamKey}', 5)">★ +5</button>
+            ${MODE.joker ? `<button class="act joker" id="jokerBtn-${CSS.escape(teamKey)}" onclick="armJoker('${teamKey}')">🃏 Joker ×2</button>` : ``}
+          </div>
+        `;
+      } else {
+        const n = members[0];
+        const s = getStudent(n);
+        const pinned   = !!s.pinned;
+        const excluded = !!s.excluded;
+        const badges   = Array.isArray(s.badges) ? s.badges : [];
+        const cls = getClasse(n);
+
+        teamCard.innerHTML = `
+          ${head}
+          ${metaRow}
+          <div class="team-body">
+            <div class="avatar ${superOf[teamKey]==='A'?'avatarA':(superOf[teamKey]==='B'?'avatarB':'')}" aria-hidden="true">${initials(n)}</div>
+            <div class="who">
+              <div class="name">${escapeHtml(n)}</div>
+              <div class="meta">${escapeHtml(cls)}</div>
+            </div>
+            <div class="icons">
+              ${pinned ? `<span title="Épinglé">📌</span>` : ``}
+              ${excluded ? `<span title="Exclu">⛔</span>` : ``}
+            </div>
+          </div>
+
+          <div class="score" id="score-${CSS.escape(teamKey)}">0 pts</div>
+          <div class="actions" id="acts-${CSS.escape(teamKey)}">
+            <button class="act plus"  onclick="inc('${teamKey}', 1)">+1</button>
+            <button class="act minus" onclick="wrong('${teamKey}', -1)">-1</button>
+            <button class="act bonus" onclick="inc('${teamKey}', 5)">★ +5</button>
+            ${MODE.joker ? `<button class="act joker" id="jokerBtn-${CSS.escape(teamKey)}" onclick="armJoker('${teamKey}')">🃏 Joker ×2</button>` : ``}
+          </div>
+
+          ${badges.length ? `<div class="actions" style="margin-top:10px; flex-wrap:wrap;">
+            ${badges.map(b => `<span class="member-badge"><span class="chip-icon">🏅</span>${escapeHtml(b)}</span>`).join("")}
+          </div>` : ``}
+        `;
+      }
+
+      playerGrid.appendChild(teamCard);
+      cards[teamKey] = teamCard;
+      updateScoreView(teamKey);
+      updateMeta(teamKey);
+    });
+
+    /* ========= Super équipes (agrégés) ========= */
+    function recomputeSuperScores(){
+      if (!MODE.teamvs) return;
+      superScoreA = 0; superScoreB = 0;
+      Object.keys(scores).forEach(k=>{
+        if (eliminated[k]) return;
+        if (superOf[k] === 'A') superScoreA += (scores[k]||0);
+        else if (superOf[k] === 'B') superScoreB += (scores[k]||0);
+      });
+      const aChipId = 'superA-chip';
+      const bChipId = 'superB-chip';
+      let a = document.getElementById(aChipId);
+      let b = document.getElementById(bChipId);
+      if (!a){
+        a = document.createElement('span');
+        a.id=aChipId; a.className='mode-chip'; a.style.background='rgba(16,185,129,.1)'; a.style.border='1px solid rgba(16,185,129,.25)'; a.style.color='#065f46';
+        modeChips.appendChild(a);
+      }
+      if (!b){
+        b = document.createElement('span');
+        b.id=bChipId; b.className='mode-chip'; b.style.background='rgba(59,130,246,.08)'; b.style.border='1px solid rgba(59,130,246,.25)'; b.style.color='#1e3a8a';
+        modeChips.appendChild(b);
+      }
+      a.textContent = `${MODE.teamA}: ${superScoreA}`;
+      b.textContent = `${MODE.teamB}: ${superScoreB}`;
+    }
+
+    /* ========= Helpers d’état ========= */
+    function setEliminated(teamKey, value=true){
+      eliminated[teamKey] = value;
+      const card = cards[teamKey];
+      if (!card) return;
+      card.classList.toggle('eliminated', value);
+      const acts = card.querySelectorAll('.actions .act');
+      acts.forEach(b => b.disabled = value || (MODE.duel && currentDuel && !currentDuel.includes(teamKey)));
+    }
+
+    function setActionsEnabled(teamKey, enabled){
+      const container = document.getElementById("acts-"+CSS.escape(teamKey));
+      if (!container) return;
+      container.querySelectorAll('button.act').forEach(b=>{
+        b.disabled = !enabled || eliminated[teamKey];
+      });
+    }
+
+    function updateMeta(teamKey){
+      if (MODE.survie){
+        const el = document.getElementById("life-"+CSS.escape(teamKey));
+        if (el) el.textContent = `❤️ ${lives[teamKey] ?? 0}`;
+      }
+      if (MODE.joker){
+        const chip = document.getElementById("joker-"+CSS.escape(teamKey));
+        const btn  = document.getElementById("jokerBtn-"+CSS.escape(teamKey));
+        const armed = !!jokerArmed[teamKey];
+        const available = !!jokerAvailable[teamKey];
+        if (chip){
+          chip.textContent = armed ? "🃏 Armé" : (available ? "🃏 Dispo" : "🃏 Utilisé");
+          chip.classList.toggle('joker-armed', armed);
+        }
+        if (btn){
+          btn.disabled = !available || armed || eliminated[teamKey];
+          btn.textContent = armed ? "🃏 Armé" : "🃏 Joker ×2";
+        }
+      }
+    }
+
+    function updateScoreView(teamKey){
+      const scoreEl = document.getElementById("score-"+CSS.escape(teamKey));
+      if (!scoreEl) return;
+      if (MODE.mystere){
+        scoreEl.textContent = "—";
+      } else {
+        scoreEl.textContent = `${scores[teamKey] || 0} pts`;
+      }
+    }
+
+    function highlightLeader(){
+      if (MODE.mystere) {
+        Object.values(cards).forEach(c=>c.classList.remove('highlight'));
+        return;
+      }
+      const vals = Object.values(scores);
+      const max  = vals.length ? Math.max(...vals) : 0;
+      Object.entries(cards).forEach(([k,card])=>{
+        card.classList.toggle("highlight", scores[k] === max && max > 0 && !eliminated[k]);
+      });
+    }
+
+    function reorderPlayers(){
+      if (MODE.mystere) return;
+      const order = Object.keys(scores).sort((a,b)=> (scores[b]-scores[a]) || a.localeCompare(b));
+      order.forEach(k => playerGrid.appendChild(cards[k]));
+    }
+
+    /* ========= Joker ========= */
+    window.armJoker = function(teamKey){
+      if (!MODE.joker || eliminated[teamKey]) return;
+      if (!jokerAvailable[teamKey]) return;
+      jokerArmed[teamKey] = true;
+      updateMeta(teamKey);
+    }
+
+    /* ========= DUEL ========= */
+    function clearDuelUI(){
+      Object.values(cards).forEach(c=>c.classList.remove('in-duel'));
+      currentDuel = null;
+      if (MODE.duel){
+        Object.keys(scores).forEach(k=> setActionsEnabled(k, true));
+      }
+    }
+    function startDuel(){
+      if (!MODE.duel) return;
+      const alive = Object.keys(scores).filter(k=>!eliminated[k]);
+      if (alive.length < 2){ alert("Pas assez d’équipes pour un duel."); return; }
+      const a = alive[Math.floor(Math.random()*alive.length)];
+      let b = a;
+      while (b === a){ b = alive[Math.floor(Math.random()*alive.length)]; }
+      currentDuel = [a,b];
+      Object.keys(scores).forEach(k=>{
+        const inDuel = currentDuel.includes(k);
+        cards[k].classList.toggle('in-duel', inDuel);
+        setActionsEnabled(k, inDuel);
+      });
+    }
+
+    /* ========= Scoring ========= */
+    window.inc = function(teamKey, delta){
+      if (eliminated[teamKey]) return;
+      if (MODE.duel && currentDuel && !currentDuel.includes(teamKey)) return;
+
+      if (MODE.joker && jokerArmed[teamKey] && delta > 0){
+        delta = delta * 2;
+        jokerArmed[teamKey] = false;
+        jokerAvailable[teamKey] = false;
+        updateMeta(teamKey);
+      }
+
+      scores[teamKey] = (scores[teamKey] || 0) + delta;
+
+      if (MODE.steal && lastWrongTeam && lastWrongTeam !== teamKey && !eliminated[lastWrongTeam]){
+        scores[teamKey] = (scores[teamKey] || 0) + MODE.stealPts;
+        scores[lastWrongTeam] = (scores[lastWrongTeam] || 0) - MODE.stealPts;
+        lastWrongTeam = null;
+      }
+
+      if (MODE.teamvs) recomputeSuperScores();
+
+      updateScoreView(teamKey);
+      highlightLeader();
+      reorderPlayers();
+
+      if (MODE.duel && currentDuel){
+        clearDuelUI();
+      }
+    }
+
+    window.wrong = function(teamKey, deltaNeg){
+      if (eliminated[teamKey]) return;
+      if (MODE.duel && currentDuel && !currentDuel.includes(teamKey)) return;
+
+      scores[teamKey] = (scores[teamKey] || 0) + (deltaNeg || 0);
+      lastWrongTeam = teamKey;
+
+      if (MODE.ko) setEliminated(teamKey, true);
+      if (MODE.survie){
+        lives[teamKey] = Math.max(0, (lives[teamKey] ?? MODE.survieLives) - 1);
+        if (lives[teamKey] === 0) setEliminated(teamKey, true);
+      }
+
+      if (MODE.teamvs) recomputeSuperScores();
+
+      updateMeta(teamKey);
+      updateScoreView(teamKey);
+      highlightLeader();
+      reorderPlayers();
+    }
+
+    /* ========= Chrono ========= */
+    let chronoTimer = null, startTime = null;
+    function startChrono(){
+      if (chronoTimer) return;
+      startTime = Date.now();
+      chronoTimer = setInterval(()=>{
+        const s  = Math.floor((Date.now()-startTime)/1000);
+        const mm = String(Math.floor(s/60)).padStart(2,'0');
+        const ss = String(s%60).padStart(2,'0');
+        chronoDisplay.textContent = `${mm}:${ss}`;
+      }, 250);
+    }
+
+    /* ========= Quiz ========= */
+    const quizTitle = localStorage.getItem("quizTitle");
+    const quizQuestions = JSON.parse(localStorage.getItem("quizQuestions") || "[]");
+    let currentQuestion = 0;
+
+    function loadQuizQuestion() {
+      if (!quizQuestions.length || !quizTitle) return;
+
+      const quizContainer = document.getElementById("quizContainer");
+      const titleEl = document.getElementById("quizTitleText");
+      const themeEl = document.getElementById("quizThemeText");
+      const qEl = document.getElementById("quizQuestion");
+      const mediaEl = document.getElementById("quizMedia");
+      const optsEl = document.getElementById("quizOptions");
+      const ansEl = document.getElementById("quizAnswer");
+
+      titleEl.textContent = quizTitle;
+      const subjectFromUrl = new URLSearchParams(window.location.search).get("subject") || "Général";
+      themeEl.textContent = subjectFromUrl;
+
+      quizContainer.style.display = "block";
+      qEl.innerHTML = "";
+      mediaEl.style.display = "none";
+      mediaEl.innerHTML = "";
+      optsEl.innerHTML = "";
+      ansEl.innerHTML = "";
+      ansEl.classList.remove("visible");
+
+      const q = quizQuestions[currentQuestion];
+
+      if (q.type === "image-texte") {
+        qEl.textContent = q.question || "";
+        if (q.image && q.image.trim() !== "") {
+          mediaEl.style.display = "block";
+          mediaEl.innerHTML = `<img src="${q.image}" alt="" onerror="this.style.display='none'">`;
+        }
+      } else {
+        qEl.textContent = `Q${currentQuestion + 1} · ${q.question || ""}`;
+      }
+
+      if (q.type === "qcm" && Array.isArray(q.options)) {
+        q.options.forEach(opt => {
+          const b = document.createElement("button");
+          b.className = "opt";
+          b.textContent = opt;
+          b.onclick = () => {
+            ansEl.innerHTML = `<strong>Réponse :</strong> ${q.reponse || "—"}`;
+            ansEl.classList.add("visible");
+          };
+          optsEl.appendChild(b);
+        });
+      } else if (q.type === "vrai-faux") {
+        ["Vrai","Faux"].forEach(rep => {
+          const b = document.createElement("button");
+          b.className = "opt";
+          b.textContent = rep;
+          b.onclick = () => {
+            ansEl.innerHTML = `<strong>Réponse :</strong> ${q.reponse || "—"}`;
+            ansEl.classList.add("visible");
+          };
+          optsEl.appendChild(b);
+        });
+      } else {
+        ansEl.textContent = `Réponse : ${q.reponse || "—"}`;
+      }
+    }
+
+    function showAnswer() {
+      const ansEl = document.getElementById("quizAnswer");
+      if (!ansEl) return;
+      ansEl.classList.add("visible");
+    }
+
+    function nextQuestion() {
+      currentQuestion++;
+      if (currentQuestion < quizQuestions.length) {
+        loadQuizQuestion();
+      } else {
+        const container = document.getElementById("quizContainer");
+        container.innerHTML = `
+          <div class="quiz-card" style="padding:24px; text-align:center;">
+            <div style="font-size:24px; font-weight:900; margin-bottom:6px;">🎉 Fin du quiz !</div>
+            <div style="color:#6b7280;">Bravo à tous.</div>
+          </div>
+        `;
+      }
+    }
+
+    if (quizTitle && quizQuestions.length > 0) {
+      loadQuizQuestion();
+    }
+
+    /* ========= Fin ========= */
+    function endGame() {
+      // Classement par équipe (tel qu’affiché à l’écran) + côté A/B
+      const results = Object.keys(scores).map(teamKey => ({
+        teamKey,
+        members: teamKey.split(' + '),
+        score: scores[teamKey] || 0,
+        classes: teamKey.split(' + ').map(n => getClasse(n)).join(' / '),
+        side: MODE.teamvs ? (superOf[teamKey] || null) : null  // 👈 side explicite
+      }));
+      results.sort((a, b) => (b.score - a.score) || a.teamKey.localeCompare(b.teamKey));
+
+      // Répartition Team vs Team
+      let playerAwards = {};
+      let rawByPlayer = {}; // points "marqués" bruts (score d’une équipe réparti entre ses membres)
+      if (MODE.teamvs){
+        // recalcul au cas où
+        recomputeSuperScores();
+
+        // rawByPlayer depuis la photographie finale des scores
+        Object.keys(scores).forEach(teamKey => {
+          const members = teamKey.split(' + ');
+          const share = (scores[teamKey] || 0) / Math.max(1, members.length);
+          members.forEach(n => { rawByPlayer[n] = (rawByPlayer[n] || 0) + share; });
+        });
+
+        const aPlayers = totalPlayersA || 1;
+        const bPlayers = totalPlayersB || 1;
+        const perA = superScoreA / aPlayers;
+        const perB = superScoreB / bPlayers;
+
+        // Attribue à chaque joueur (part égale selon son camp)
+        (teams || []).forEach((group, idx) => {
+          const members = Array.isArray(group) ? group : [group];
+          const side = (idx % 2 === 0) ? 'A' : 'B';
+          members.forEach(name => {
+            playerAwards[name] = parseFloat((side==='A' ? perA : perB).toFixed(2));
+          });
+        });
+      }
+
+      const payload = {
+        nomPartie: localStorage.getItem("nomPartie") || "Partie",
+        subject: new URLSearchParams(location.search).get("subject") || "",
+        timestamp: Date.now(),
+        results,
+        teamMode: MODE.teamvs ? {
+          teamA: MODE.teamA,
+          teamB: MODE.teamB,
+          scoreA: superScoreA,        // 👈 totaux fiables
+          scoreB: superScoreB,
+          playersA: totalPlayersA,
+          playersB: totalPlayersB,
+          teamOf,                     // 👈 joueur -> A/B
+          rawByPlayer                 // 👈 points bruts
+        } : null,
+        playerAwards                  // { "Alice": 7.5, "Bob": 7.5, ... } si teamvs actif
+      };
+      localStorage.setItem("lastGameResults", JSON.stringify(payload));
+
+      // Historique léger
+      const hist = JSON.parse(localStorage.getItem("historiqueParties") || "[]");
+      hist.push({
+        dateIso: new Date().toISOString(),
+        nom: nomPartie,
+        matiere: subject || "",
+        modeDuo: isDuo,
+        scores: { ...scores }
+      });
+      localStorage.setItem("historiqueParties", JSON.stringify(hist));
+
+      window.location.href = "resultats.html";
+    }
+
+    // Expose
+    window.startChrono = startChrono;
+    window.showAnswer = showAnswer;
+    window.nextQuestion = nextQuestion;
+    window.endGame = endGame;
+
+    if (MODE.teamvs) recomputeSuperScores();
+  </script>
+</body>
+</html>

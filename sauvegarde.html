@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sauvegarder / Restaurer les données</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #e3f2fd, #fce4ec);
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: white;
+      padding: 40px;
+      border-radius: 24px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+    }
+    h1 { text-align: center; color: #444; margin-bottom: 10px; }
+    .desc { text-align: center; color: #666; margin-bottom: 30px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .card {
+      background: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .card h2 { margin: 0 0 10px; color: #333; }
+    .btn {
+      background: #d45c94;
+      color: #fff;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+    .btn.secondary { background: #42a5f5; }
+    .btn.gray { background: #888; }
+    .row { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    textarea {
+      width: 100%; min-height: 180px; font-family: monospace; font-size: 13px;
+      border-radius: 10px; border: 1px solid #ddd; padding: 10px; background: #fff;
+    }
+    .small { font-size: 12px; color: #777; }
+    .footer { text-align: center; margin-top: 25px; }
+    .kbd { background:#eee; border-radius:6px; padding:2px 6px; font-family:monospace; }
+    .list { font-size: 14px; color:#555; margin-top:8px; }
+    .ok { color:#2e7d32; font-weight:600; }
+    .warn { color:#ef6c00; font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💾 Sauvegarder / Restaurer les données</h1>
+    <p class="desc">Exporte un fichier JSON, puis importe-le sur un autre ordinateur pour retrouver toutes tes données.</p>
+
+    <div class="grid">
+      <!-- EXPORT -->
+      <div class="card">
+        <h2>⬇️ Exporter</h2>
+        <p class="small">Cela crée un fichier <span class="kbd">.json</span> contenant toutes les clés du <em>localStorage</em> de cette application.</p>
+        <div class="row">
+          <button class="btn" onclick="exportData()">Exporter en .json</button>
+          <button class="btn secondary" onclick="copyToClipboard()">Copier le JSON</button>
+        </div>
+        <div class="list" id="keysPreview"></div>
+      </div>
+
+      <!-- IMPORT -->
+      <div class="card">
+        <h2>⬆️ Restaurer</h2>
+        <p class="small">Choisis un fichier <span class="kbd">.json</span> d’export puis restaure. Tu peux aussi coller le JSON ci-dessous.</p>
+        <input type="file" id="fileInput" accept=".json" />
+        <div class="row">
+          <label><input type="checkbox" id="wipeFirst" /> Effacer toutes les données avant de restaurer</label>
+        </div>
+        <div class="row">
+          <button class="btn" onclick="importFromFile()">Importer depuis un fichier</button>
+          <button class="btn secondary" onclick="importFromTextarea()">Importer depuis la zone texte</button>
+        </div>
+        <textarea id="jsonTextarea" placeholder="Colle ici ton JSON d’export si tu préfères restaurer depuis le presse-papiers…"></textarea>
+        <div id="importStatus" class="small"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="btn gray" onclick="location.href='admin.html'">⬅️ Retour au tableau de bord</button>
+    </div>
+  </div>
+
+  <script>
+    // --- Aperçu des clés existantes ---
+    function refreshKeysPreview() {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        keys.push(k);
+      }
+      keys.sort();
+      const preview = document.getElementById('keysPreview');
+      preview.innerHTML = keys.length
+        ? 'Clés détectées (' + keys.length + ') :<br>• ' + keys.join('<br>• ')
+        : '<span class="warn">Aucune donnée détectée pour le moment.</span>';
+    }
+    refreshKeysPreview();
+
+    // --- EXPORT : crée un objet avec toutes les paires clé/valeur du localStorage ---
+    function buildExportObject() {
+      const data = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        data[key] = localStorage.getItem(key); // on sauvegarde la valeur brute (chaîne)
+      }
+      return {
+        exportedAt: new Date().toISOString(),
+        origin: location.origin,
+        app: "ProfLife-Quiz",
+        formatVersion: 1,
+        data
+      };
+    }
+
+    function exportData() {
+      const payload = buildExportObject();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+
+      const pad = n => String(n).padStart(2, '0');
+      const d = new Date();
+      const fileName = `proflife_backup_${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}-${pad(d.getSeconds())}.json`;
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(a.href);
+      a.remove();
+      alert("✅ Export terminé !");
+    }
+
+    async function copyToClipboard() {
+      try {
+        const payload = buildExportObject();
+        await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+        alert("✅ JSON copié dans le presse-papiers !");
+      } catch (e) {
+        alert("❌ Impossible de copier automatiquement. Sélectionne et copie manuellement le texte.");
+      }
+    }
+
+    // --- IMPORT ---
+    function restoreFromObject(obj, wipe) {
+      if (!obj) throw new Error("Aucun objet fourni.");
+      const map = obj.data ? obj.data : obj; // accepte soit {data:{...}}, soit une map directe
+      if (typeof map !== "object") throw new Error("Format de fichier invalide.");
+
+      if (wipe) localStorage.clear();
+
+      let count = 0;
+      for (const [k, v] of Object.entries(map)) {
+        // On restaure les valeurs brutes (chaînes)
+        localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v));
+        count++;
+      }
+      return count;
+    }
+
+    function importFromFile() {
+      const input = document.getElementById('fileInput');
+      const wipe = document.getElementById('wipeFirst').checked;
+      const status = document.getElementById('importStatus');
+      status.textContent = "";
+
+      if (!input.files || !input.files[0]) {
+        alert("Choisis d'abord un fichier d’export (.json).");
+        return;
+      }
+
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const obj = JSON.parse(reader.result);
+          const count = restoreFromObject(obj, wipe);
+          status.innerHTML = `<span class="ok">✅ Import réussi :</span> ${count} clés restaurées.`;
+          refreshKeysPreview();
+          alert("✅ Restauration terminée !");
+        } catch (e) {
+          console.error(e);
+          status.innerHTML = `<span class="warn">❌ Erreur d’import :</span> ${e.message}`;
+          alert("❌ Erreur pendant l’import. Vérifie le fichier.");
+        }
+      };
+      reader.readAsText(file, "utf-8");
+    }
+
+    function importFromTextarea() {
+      const txt = document.getElementById('jsonTextarea').value.trim();
+      const wipe = document.getElementById('wipeFirst').checked;
+      const status = document.getElementById('importStatus');
+      status.textContent = "";
+
+      if (!txt) {
+        alert("Colle d’abord le JSON d’export dans la zone de texte.");
+        return;
+      }
+      try {
+        const obj = JSON.parse(txt);
+        const count = restoreFromObject(obj, wipe);
+        status.innerHTML = `<span class="ok">✅ Import réussi :</span> ${count} clés restaurées.`;
+        refreshKeysPreview();
+        alert("✅ Restauration terminée !");
+      } catch (e) {
+        console.error(e);
+        status.innerHTML = `<span class="warn">❌ Erreur d’import :</span> ${e.message}`;
+        alert("❌ Erreur pendant l’import. Vérifie le JSON.");
+      }
+    }
+  </script>
+</body>
+</html>

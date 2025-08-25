@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Liste des Quiz</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #e3f2fd, #fce4ec);
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 40px;
+      border-radius: 30px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .quiz-card {
+      background: #fafafa;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 25px;
+    }
+    .quiz-card h2 {
+      margin-top: 0;
+      color: #d45c94;
+    }
+    .quiz-card ul {
+      padding-left: 20px;
+      margin-top: 10px;
+    }
+    .quiz-card li {
+      margin-bottom: 5px;
+    }
+    .delete-btn {
+      background-color: #e57373;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 10px;
+      margin-right: 10px;
+    }
+    .delete-btn:hover {
+      background-color: #d32f2f;
+    }
+    .edit-btn {
+      background-color: #64b5f6;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .edit-btn:hover {
+      background-color: #42a5f5;
+    }
+    .back-btn {
+      display: block;
+      text-align: center;
+      margin-top: 30px;
+      color: #555;
+      text-decoration: none;
+    }
+    .back-btn:hover {
+      color: #d45c94;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📋 Liste des Quiz enregistrés</h1>
+    <div id="quizList"></div>
+    <a href="admin.html" class="back-btn">⬅️ Retour au tableau de bord</a>
+  </div>
+
+  <script>
+    function afficherQuizzes() {
+      const quizList = document.getElementById("quizList");
+      const quizzes = JSON.parse(localStorage.getItem("quizzes") || "[]");
+
+      quizList.innerHTML = "";
+
+      if (quizzes.length === 0) {
+        quizList.innerHTML = "<p>Aucun quiz enregistré pour le moment.</p>";
+        return;
+      }
+
+      quizzes.forEach((quiz, index) => {
+        const card = document.createElement("div");
+        card.className = "quiz-card";
+        card.innerHTML = `
+          <h2>📘 ${quiz.title}</h2>
+          <p><strong>Classes ciblées :</strong> ${quiz.classes.join(", ")}</p>
+          <h3>Questions :</h3>
+          <ul>
+            ${quiz.questions.map(q => `<li><strong>Q:</strong> ${q.question}<br><strong>R:</strong> ${q.reponse}</li>`).join("")}
+          </ul>
+          <button class="delete-btn" onclick="supprimerQuiz(${index})">🗑️ Supprimer</button>
+          <button class="edit-btn" onclick="modifierQuiz(${index})">✏️ Modifier</button>
+        `;
+        quizList.appendChild(card);
+      });
+    }
+
+    function supprimerQuiz(index) {
+      if (!confirm("Voulez-vous vraiment supprimer ce quiz ?")) return;
+      const quizzes = JSON.parse(localStorage.getItem("quizzes") || "[]");
+      quizzes.splice(index, 1);
+      localStorage.setItem("quizzes", JSON.stringify(quizzes));
+      afficherQuizzes();
+    }
+
+    function modifierQuiz(index) {
+      localStorage.setItem("quizEditIndex", index);
+      window.location.href = "quiz_admin.html";
+    }
+
+    afficherQuizzes();
+  </script>
+</body>
+</html>

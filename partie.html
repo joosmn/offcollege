@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Créer une Partie</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Empêche la restauration de formulaire par certains navigateurs -->
+  <meta http-equiv="Cache-Control" content="no-store" />
+
+  <style>
+    /* ===== Thème crème + mint ===== */
+    :root{
+      --bg1:#fffdf6; --bg2:#f1fff6;
+      --card:#ffffff;
+      --ring:#e8eee7; --ring2:#dde7df;
+      --text:#2f3e34; --muted:#63766d;
+      --mint:#34d399; --mint2:#a7f3d0; --mint3:#d1fae5;
+      --rose:#d45c94; --rose2:#bb3d7a;
+      --shadow:0 18px 44px rgba(17,24,39,.10);
+      --shadow-sm:0 10px 30px rgba(17,24,39,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0; padding:0; color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      background:
+        radial-gradient(1200px 260px at 100% -10%, #eaffef 0%, transparent 60%),
+        radial-gradient(1200px 240px at 0% -10%, #fff7e0 0%, transparent 60%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+      min-height:100vh;
+    }
+    a{color:inherit; text-decoration:none}
+
+    .wrap{max-width:1100px;margin:24px auto;padding:0 16px}
+    .card{background:linear-gradient(180deg,#fff,#fbfefb);border:1px solid var(--ring);border-radius:20px;box-shadow:var(--shadow)}
+    .pane{padding:18px}
+
+    /* Appbar */
+    .appbar{
+      position:sticky; top:0; z-index:20; backdrop-filter:blur(8px);
+      display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:14px;
+      background:rgba(255,255,255,.9); border:1px solid var(--ring); border-radius:16px; box-shadow:var(--shadow-sm)
+    }
+    .title{font-weight:900; letter-spacing:.2px; display:flex; align-items:center; gap:10px}
+    .tag{font-size:12px;font-weight:900;padding:4px 8px;border-radius:999px;background:#fff;border:1px solid var(--ring);color:var(--muted)}
+    .grow{flex:1}
+
+    /* Stepper */
+    .stepper{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    .step{
+      display:inline-flex;align-items:center;gap:10px;padding:8px 12px;border-radius:999px;font-weight:900;
+      background:#fafaf9;border:1px solid var(--ring);color:#3f4d43;
+    }
+    .step::before{
+      content:attr(data-n);width:22px;height:22px;display:inline-grid;place-items:center;border-radius:50%;
+      background:#d1fae5;color:#065f46;font-size:12px;font-weight:900;
+    }
+    .step.active{background:linear-gradient(135deg,#d1fae5,#fde68a);color:#1f2937;border-color:#e5e7eb}
+    .step.active::before{background:#86efac;color:#064e3b}
+    .step.done{background:#f0fdf4;color:#052e25;border-color:#bbf7d0}
+    .step.done::before{background:#a7f3d0;color:#052e25}
+    .hint{color:var(--muted);font-weight:700}
+    .spacer{flex:1}
+
+    label{
+      display:block; margin-bottom:6px; font-size:11px; letter-spacing:.3px;
+      font-weight:900; color:#597065; text-transform:uppercase
+    }
+    .help{
+      margin-top:6px; font-size:12px; line-height:1.35; color:#63766d;
+    }
+
+    .input{
+      width:100%;padding:12px;border:1px solid var(--ring2);border-radius:12px;background:#fff;color:#0f1e17;font-weight:800
+    }
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width: 840px){ .row2{grid-template-columns:1fr} }
+
+    /* Selects : beau, accessible, crème+mint */
+    select.input{
+      appearance:none; -webkit-appearance:none; -moz-appearance:none;
+      background:
+        linear-gradient(180deg,#ffffff,#fbfefb) padding-box,
+        linear-gradient(180deg,#eef5ef,#dde7df) border-box;
+      border:1px solid var(--ring2);
+      border-radius:12px;
+      box-shadow:var(--shadow-sm);
+      padding:12px 44px 12px 14px; /* place pour flèche */
+      font-weight:800; color:var(--text);
+      transition: box-shadow .15s ease, border-color .15s ease, transform .05s ease;
+      cursor:pointer;
+      background-image:
+        url("data:image/svg+xml;utf8,\
+          <svg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='%2334d399' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+            <polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat:no-repeat; background-position:right 12px center; background-size:20px;
+    }
+    select.input:hover{ border-color:var(--mint); box-shadow:0 8px 24px rgba(16,185,129,.12); }
+    select.input:focus{
+      outline:0; border-color:var(--mint);
+      box-shadow:0 0 0 3px rgba(52,211,153,.22), 0 10px 30px rgba(17,24,39,.08);
+      transform:translateY(-1px);
+    }
+    select.input:disabled{ opacity:.6; cursor:not-allowed; box-shadow:none; }
+    select.input.select-lg{ padding:14px 48px 14px 16px; border-radius:14px; }
+
+    /* Classes */
+    .class-box{background:#fbfefb;border:1px dashed var(--ring);border-radius:12px;padding:10px}
+    .class-chips{display:flex;gap:8px;flex-wrap:wrap;min-height:40px}
+    .class-chip{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0;padding:6px 10px;border-radius:999px;font-weight:900;display:inline-flex;gap:6px;align-items:center}
+    .x{cursor:pointer;color:#b91c1c}
+
+    .grid-classes{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+    .c-card{background:#fff;border:1px solid var(--ring);border-radius:14px;padding:10px;box-shadow:var(--shadow-sm)}
+    .count{font-size:12px;color:#0f5132;background:#ecfdf5;border:1px solid #bbf7d0;border-radius:999px;padding:2px 8px;font-weight:900}
+
+    /* Élèves */
+    .two{display:grid;grid-template-columns:320px 1fr;gap:12px}
+    @media (max-width: 900px){ .two{grid-template-columns:1fr} }
+    .side{background:#fff;border:1px solid var(--ring);border-radius:14px;padding:10px;box-shadow:var(--shadow-sm)}
+    .list{display:grid;gap:8px}
+    .row{
+      display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;
+      background:#fff;border:1px solid var(--ring2);border-radius:12px;padding:8px 10px;box-shadow:var(--shadow-sm)
+    }
+    .avatar{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:900;background:linear-gradient(135deg,var(--mint2),var(--mint));color:#043b2c}
+    .name{font-weight:900}
+    .muted{color:var(--muted);font-size:12px}
+    .actions{display:flex;gap:6px}
+    .mini{border:1px solid var(--ring);background:#fff;border-radius:10px;padding:6px 9px;font-weight:800;cursor:pointer}
+    .mini.duo{border-color:#ffd1e7;background:#fff0f6;color:#9c2b68}
+    .mini[disabled]{opacity:.5;cursor:not-allowed}
+    .chips-selected{display:flex;gap:6px;flex-wrap:wrap}
+    .chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#ffffff;border:1px solid var(--ring);font-weight:900;box-shadow:var(--shadow-sm)}
+    .chip .x{border:none;background:#ffe3ec;color:#c2185b;border-radius:8px;padding:2px 6px;cursor:pointer;font-size:12px}
+
+    .loadmore{display:block;width:100%;border:1px dashed var(--ring);background:#fff;border-radius:10px;padding:10px 12px;font-weight:900;cursor:pointer}
+
+    /* Modes */
+    .mode-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;background:#fff;border:1px solid #e9ecff;border-radius:12px;padding:10px}
+    .mode-title-sm{font-weight:900}
+    .mode-desc{color:#6a7690;font-size:13px}
+    .mode-number{width:76px} .mode-text{width:140px}
+
+    .banner{
+      display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;
+      background:#fff;border:1px solid var(--ring);border-radius:12px;padding:8px 10px;box-shadow:var(--shadow-sm)
+    }
+    .bchip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800;background:#fafaff;border:1px solid #e8e6ff;color:#1e2a5c}
+    .bchip.duo{background:#fff5fa;border-color:#ffd1e7;color:#9c2b68}
+    .bchip.mixte{background:#effdf5;border-color:#bbf7d0;color:#065f46}
+
+    /* Footer nav */
+    .footer{ display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px }
+    .btn{
+      border:1px solid var(--ring);border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer;
+      background:#fff;color:#0f1e17;box-shadow:var(--shadow-sm)
+    }
+    .btn.primary{background:linear-gradient(135deg,var(--mint),var(--mint2));color:#043b2c;border-color:transparent}
+    .btn.ghost{background:#fff}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="appbar">
+      <div class="title">🎮 Créer une nouvelle Partie</div>
+      <span class="tag">Assistant pas-à-pas</span>
+      <div class="grow"></div>
+      <a class="btn" href="admin.html">⬅️ Tableau de bord</a>
+    </div>
+
+    <div class="card">
+      <div class="pane">
+        <div class="stepper">
+          <div id="s1" class="step active" data-n="1">Infos</div>
+          <div id="s2" class="step" data-n="2">Classes</div>
+          <div id="s3" class="step" data-n="3">Joueurs</div>
+          <div id="s4" class="step" data-n="4">Modes & Lancer</div>
+          <div class="spacer"></div>
+          <div id="hint" class="hint">Renseigne le nom, la matière et, si tu veux, un quiz.</div>
+        </div>
+
+        <!-- ===== Step 1: Infos ===== -->
+        <section id="step1">
+          <div class="row2">
+            <div class="field">
+              <label for="nom">Nom de la partie</label>
+              <input id="nom" class="input" placeholder="Ex : Interclasses 6e" autocomplete="off" />
+              <div class="help">Nom lisible pour l’écran de jeu et l’historique.</div>
+            </div>
+            <div class="field">
+              <label for="matiere">Matière</label>
+              <select id="matiere" class="input select-lg" autocomplete="off">
+                <option>Français</option><option>Maths</option><option>Histoire</option>
+                <option>SVT</option><option>Anglais</option>
+              </select>
+              <div class="help">La matière alimente les classements par matière.</div>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <label for="quizSel">Quiz (optionnel)</label>
+            <select id="quizSel" class="input" autocomplete="off"><option value="">Aucun</option></select>
+            <div class="help">Optionnel. Après l’étape 2, la liste est filtrée selon les classes choisies.</div>
+          </div>
+          <div class="footer">
+            <button class="btn primary" id="to2" type="button">Continuer →</button>
+          </div>
+        </section>
+
+        <!-- ===== Step 2: Classes ===== -->
+        <section id="step2" style="display:none;">
+          <div class="field">
+            <label>Classes concernées</label>
+            <div class="class-box">
+              <div id="classChips" class="class-chips"></div>
+              <div style="display:flex; gap:8px; margin-top:8px;flex-wrap:wrap;">
+                <input id="classInput" class="input" placeholder="Saisis une classe (ex : 5eA) puis ➕" autocomplete="off">
+                <select id="classPicker" class="input" autocomplete="off"></select>
+                <button id="addClass" class="btn" type="button">➕ Ajouter</button>
+                <button id="clearClasses" class="btn ghost" type="button">✖ Vider</button>
+              </div>
+              <div class="help">Ajoute une ou plusieurs classes. Le bouton “Tout sélectionner” inclut tous les élèves de la classe.</div>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <label>Classes disponibles</label>
+            <div class="help">Astuce : commence par les classes les plus nombreuses, puis affine avec la recherche à l’étape suivante.</div>
+            <div id="classesGrid" class="grid-classes"></div>
+          </div>
+          <div class="footer">
+            <button class="btn" id="b1" type="button">← Précédent</button>
+            <button class="btn primary" id="to3" type="button">Continuer →</button>
+          </div>
+        </section>
+
+        <!-- ===== Step 3: Joueurs ===== -->
+        <section id="step3" style="display:none;">
+          <div class="banner">
+            <span class="bchip">Sélectionnés : <b id="countSel">0</b></span>
+            <span class="bchip mixte">Mode mixte (solos + duos) ou</span>
+            <span class="bchip duo">Mode duo (tout le monde par deux)</span>
+          </div>
+
+          <div class="two">
+            <aside class="side">
+              <div class="field">
+                <label>Recherche</label>
+                <input id="q" class="input" placeholder="Tape un prénom / une classe…" autocomplete="off" />
+                <div class="help">Tape un prénom ou une classe (ex : “5eB”). “Tout sélectionner (visibles)” ajoute en masse.</div>
+              </div>
+              <div class="field">
+                <button id="selectAllVisible" class="btn" type="button">Tout sélectionner (visibles)</button>
+                <button id="unselectAllVisible" class="btn ghost" type="button">Tout désélectionner (visibles)</button>
+              </div>
+              <div class="field">
+                <label>Modes principaux</label>
+                <div class="list">
+                  <button id="toggleDuo" class="mini duo" type="button">🤝 Basculer Mode Duo</button>
+                  <button id="toggleMixte" class="mini" type="button">🎯 Basculer Mode Mixte</button>
+                </div>
+                <div class="help">Duo : tout le monde par deux. Mixte : crée des duos au cas par cas et garde des solos.</div>
+              </div>
+              <div class="field">
+                <label>Joueurs sélectionnés</label>
+                <div id="chipsSel" class="chips-selected"></div>
+                <div class="help">Clique sur ✕ pour retirer un joueur. Les duos se gèrent dans “Aperçu équipes”.</div>
+              </div>
+              <div class="field">
+                <label>Aperçu équipes (mixte)</label>
+                <div id="duosDisplay" class="chips-selected"></div>
+                <div class="help">Clique sur ✕ pour dissocier un duo. Les non-duotés restent en solo.</div>
+              </div>
+            </aside>
+
+            <main>
+              <div class="list" id="list"></div>
+              <button id="loadMore" class="loadmore" type="button" style="display:none;">Afficher plus</button>
+            </main>
+          </div>
+
+          <div class="footer">
+            <button class="btn" id="b2" type="button">← Précédent</button>
+            <button class="btn primary" id="to4" type="button">Continuer →</button>
+          </div>
+        </section>
+
+        <!-- ===== Step 4: Modes + Lancer ===== -->
+        <section id="step4" style="display:none;">
+          <div class="row2">
+            <div class="field">
+              <label>Récapitulatif</label>
+              <div class="side">
+                <div><b>Nom :</b> <span id="sumName">—</span></div>
+                <div><b>Matière :</b> <span id="sumSub">—</span></div>
+                <div><b>Quiz :</b> <span id="sumQuiz">—</span></div>
+                <div><b>Classes :</b> <span id="sumClasses">—</span></div>
+                <div><b>Joueurs :</b> <span id="sumPlayers">0</span></div>
+              </div>
+              <div class="help">Vérifie les infos avant de lancer. Tu peux revenir en arrière si besoin.</div>
+            </div>
+
+            <div class="field">
+              <label>Modes supplémentaires</label>
+              <div class="help">Active 0, 1 ou plusieurs modes. “Aucun mode” désactive toutes les options.</div>
+              <div class="list">
+                <label class="mode-row"><input type="checkbox" id="mNone">
+                  <div><div class="mode-title-sm">Aucun mode</div><div class="mode-desc">Partie classique.</div></div><div></div>
+                </label>
+                <label class="mode-row"><input type="checkbox" id="mKO">
+                  <div><div class="mode-title-sm">KO</div><div class="mode-desc">Mauvaise réponse = élimination.</div></div><div></div>
+                </label>
+                <label class="mode-row"><input type="checkbox" id="mSurvie">
+                  <div>
+                    <div class="mode-title-sm">Survie</div>
+                    <div class="mode-desc">Chaque équipe a des vies.</div>
+                    <div class="help">Nombre de vies par équipe.</div>
+                  </div>
+                  <div><input id="mLives" class="input mode-number" type="number" min="1" value="3" autocomplete="off"></div>
+                </label>
+                <label class="mode-row"><input type="checkbox" id="mMystere">
+                  <div><div class="mode-title-sm">Mystère</div><div class="mode-desc">Réponses cachées.</div></div><div></div>
+                </label>
+                <label class="mode-row"><input type="checkbox" id="mJoker">
+                  <div><div class="mode-title-sm">Joker</div><div class="mode-desc">Un joker par équipe.</div></div><div></div>
+                </label>
+                <label class="mode-row"><input type="checkbox" id="mDuel">
+                  <div><div class="mode-title-sm">Duel</div><div class="mode-desc">Défis 1v1 ponctuels.</div></div><div></div>
+                </label>
+                <label class="mode-row"><input type="checkbox" id="mSteal">
+                  <div>
+                    <div class="mode-title-sm">Steal</div>
+                    <div class="mode-desc">Vol de points.</div>
+                    <div class="help">Points volés lorsqu’un steal est réussi.</div>
+                  </div>
+                  <div><input id="mStealPts" class="input mode-number" type="number" min="1" value="1" autocomplete="off"></div>
+                </label>
+                <label class="mode-row">
+                  <input type="checkbox" id="mTvT">
+                  <div>
+                    <div class="mode-title-sm">Équipe contre équipe</div>
+                    <div class="mode-desc">Deux grandes équipes, scores agrégés.</div>
+                    <div class="help">Donne un nom à chaque équipe (facultatif).</div>
+                  </div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <input id="mA" class="input mode-text" placeholder="Équipe A" autocomplete="off">
+                    <input id="mB" class="input mode-text" placeholder="Équipe B" autocomplete="off">
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer">
+            <button class="btn" id="b3" type="button">← Précédent</button>
+            <button class="btn primary" id="start" type="button">🚀 Lancer la partie</button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========= État ========= */
+    const wiz = {
+      name: "", subject: "Français", classes: [],
+      quizTitle: "", selected: new Set(),
+      duoMode: false, mixteMode: false,
+      duos: [], inDuo: new Set(),
+
+      students: JSON.parse(localStorage.getItem("students")||"[]"),
+      quizzes:  JSON.parse(localStorage.getItem("quizzes") || "[]"),
+
+      // rendu paresseux
+      pool: [], filtered: [], page: 0, pageSize: 120
+    };
+
+    /* ========= Helpers ========= */
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const sanitize = s => String(s||"").replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    const initials = str => (str||"").split(/\s+/).map(s=>s[0]||"").join("").slice(0,2).toUpperCase();
+
+    /* ========= Éléments ========= */
+    const stepEls = { s1:$("#s1"), s2:$("#s2"), s3:$("#s3"), s4:$("#s4") };
+    const hintEl  = $("#hint");
+
+    // Step 1
+    const nom = $("#nom"), matiere=$("#matiere"), quizSel=$("#quizSel");
+
+    // Step 2
+    const classChips=$("#classChips"), classInput=$("#classInput"),
+          classPicker=$("#classPicker"), classesGrid=$("#classesGrid");
+
+    // Step 3
+    const q=$("#q"), list=$("#list"), countSel=$("#countSel"),
+          loadMore=$("#loadMore"), chipsSel=$("#chipsSel"), duosDisplay=$("#duosDisplay");
+    const toggleDuo=$("#toggleDuo"), toggleMixte=$("#toggleMixte");
+
+    // Step 4
+    const sumName=$("#sumName"), sumSub=$("#sumSub"), sumQuiz=$("#sumQuiz"),
+          sumClasses=$("#sumClasses"), sumPlayers=$("#sumPlayers");
+    const mNone=$("#mNone"), mKO=$("#mKO"), mSurvie=$("#mSurvie"), mLives=$("#mLives"),
+          mMystere=$("#mMystere"), mJoker=$("#mJoker"), mDuel=$("#mDuel"),
+          mSteal=$("#mSteal"), mStealPts=$("#mStealPts"),
+          mTvT=$("#mTvT"), mA=$("#mA"), mB=$("#mB");
+
+    /* ========= Stepper ========= */
+    function setStep(n){
+      [1,2,3,4].forEach(i=>{
+        stepEls['s'+i].className = 'step'+(n===i?' active': n>i?' done':'');
+        $('#step'+i).style.display = (n===i?'block':'none');
+      });
+      hintEl.textContent =
+        n===1 ? "Renseigne le nom, la matière et, si tu veux, un quiz." :
+        n===2 ? "Choisis les classes. La liste des quiz sera filtrée." :
+        n===3 ? "Recherche, sélection par lot, création de duos (mixte/duo)." :
+                "Active des règles spéciales puis lance la partie.";
+      if(n===2) refreshClassesUI();
+      if(n===3) { buildPool(); renderList(true); }
+      if(n===4) refreshSummary();
+      window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    /* ========= Step 1 ========= */
+    nom.oninput = ()=> wiz.name = nom.value.trim();
+    matiere.onchange = ()=> wiz.subject = matiere.value;
+    function refreshQuizOptions(){
+      const allowed = wiz.classes.length
+        ? wiz.quizzes.filter(q => Array.isArray(q.classes) && q.classes.some(c=>wiz.classes.includes(c)))
+        : wiz.quizzes;
+      quizSel.innerHTML = `<option value="">Aucun</option>` + allowed.map(q=>`<option>${sanitize(q.title||"(Sans titre)")}</option>`).join("");
+      if(allowed.some(q=>q.title===wiz.quizTitle)) quizSel.value = wiz.quizTitle; else quizSel.value = "";
+    }
+    quizSel.onchange = ()=> wiz.quizTitle = quizSel.value;
+
+    /* ========= Step 2 ========= */
+    const classesAll = [...new Set(wiz.students.map(s=>s.classe).filter(c=>c && c!=="Inconnue"))].sort();
+    function refreshClassesUI(){
+      // chips sélectionnées
+      classChips.innerHTML = wiz.classes.length
+        ? wiz.classes.map(c=>`<span class="class-chip">${sanitize(c)} <span class="x" data-c="${sanitize(c)}">✕</span></span>`).join("")
+        : `<span class="muted">Aucune classe</span>`;
+      $$("#classChips .x").forEach(x => x.onclick = ()=>{ wiz.classes = wiz.classes.filter(c=>c!==x.dataset.c); refreshClassesUI(); refreshQuizOptions(); });
+
+      // picker
+      classPicker.innerHTML = classesAll.filter(c=>!wiz.classes.includes(c)).map(c=>`<option>${sanitize(c)}</option>`).join("");
+
+      // grille
+      classesGrid.innerHTML = classesAll.map(c=>{
+        const count = wiz.students.filter(s=>s.classe===c).length;
+        const sel = wiz.classes.includes(c);
+        return `<div class="c-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div style="font-weight:900">${sanitize(c)}</div>
+            <span class="count">${count} él.</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn ${sel?'':'primary'}" data-add="${sanitize(c)}" type="button">${sel?'✅ Ajoutée':'➕ Ajouter'}</button>
+            ${count ? `<button class="btn ghost" data-all="${sanitize(c)}" type="button">Tout sélectionner</button>` : ''}
+          </div>
+        </div>`;
+      }).join("");
+      // actions
+      $$('#classesGrid [data-add]').forEach(b=> b.onclick = ()=>{ const c=b.getAttribute('data-add'); if(!wiz.classes.includes(c)) wiz.classes.push(c); refreshClassesUI(); refreshQuizOptions(); });
+      $$('#classesGrid [data-all]').forEach(b=> b.onclick = ()=>{ const c=b.getAttribute('data-all'); wiz.students.filter(s=>s.classe===c).forEach(s=> wiz.selected.add(s.name)); updateSelectedUI(); });
+    }
+    $("#addClass").onclick = ()=>{
+      const typed = classInput.value.trim(), pick = classPicker.value;
+      const val = typed || pick; if(!val) return;
+      if(!wiz.classes.includes(val)) wiz.classes.push(val);
+      classInput.value=""; refreshClassesUI(); refreshQuizOptions();
+    };
+    $("#clearClasses").onclick = ()=>{ wiz.classes = []; refreshClassesUI(); refreshQuizOptions(); };
+    $("#b1").onclick = ()=> setStep(1);
+    $("#to2").onclick = ()=> setStep(2);
+    $("#to3").onclick = ()=> setStep(3);
+
+    /* ========= Step 3 : Joueurs ========= */
+    function buildPool(){
+      wiz.pool = wiz.students.filter(s => wiz.classes.length ? wiz.classes.includes(s.classe) : true);
+      wiz.filtered = wiz.pool; wiz.page = 0;
+    }
+    function applyFilter(){
+      const term = q.value.trim().toLowerCase();
+      wiz.filtered = !term ? wiz.pool :
+        wiz.pool.filter(s => (s.name||"").toLowerCase().includes(term) || (s.classe||"").toLowerCase().includes(term));
+      wiz.page = 0;
+    }
+    function renderList(reset=false){
+      if(reset){ list.innerHTML=""; }
+      const start = wiz.page * wiz.pageSize;
+      const slice = wiz.filtered.slice(start, start + wiz.pageSize);
+
+      slice.forEach(s=>{
+        const checked = wiz.selected.has(s.name);
+        const inDuo = wiz.inDuo.has(s.name);
+        const row = document.createElement('div'); row.className = 'row';
+        row.innerHTML = `
+          <div class="avatar">${sanitize(initials(s.name))}</div>
+          <div>
+            <div class="name">${sanitize(s.name)}</div>
+            <div class="muted">${sanitize(s.classe||"—")}</div>
+          </div>
+          <div class="actions">
+            <button class="mini" data-t="${sanitize(s.name)}">${checked?'Retirer':'Ajouter'}</button>
+            <button class="mini duo" data-d="${sanitize(s.name)}" ${(!wiz.mixteMode || inDuo)?'disabled':''}>DUO</button>
+          </div>`;
+        const add = row.querySelector('[data-t]');
+        add.onclick = ()=>{
+          if(wiz.selected.has(s.name)){ wiz.selected.delete(s.name); removeFromDuoIfPresent(s.name); }
+          else { wiz.selected.add(s.name); }
+          updateSelectedUI();
+        };
+        const duo = row.querySelector('[data-d]');
+        duo.onclick = ()=> handleDuoClick(s.name);
+        list.appendChild(row);
+      });
+
+      loadMore.style.display = (start + slice.length < wiz.filtered.length) ? 'block' : 'none';
+      if(loadMore.style.display==='block'){ loadMore.onclick = ()=>{ wiz.page++; renderList(); }; }
+      updateSelectedUI();
+    }
+    function updateSelectedUI(){
+      countSel.textContent = wiz.selected.size;
+
+      // chips des sélectionnés
+      chipsSel.innerHTML = "";
+      [...wiz.selected].sort((a,b)=>a.localeCompare(b)).forEach(n=>{
+        const chip = document.createElement('span'); chip.className='chip';
+        chip.innerHTML = `${sanitize(n)} <button class="x" aria-label="Retirer">✕</button>`;
+        chip.querySelector('.x').onclick = ()=>{ wiz.selected.delete(n); removeFromDuoIfPresent(n); updateSelectedUI(); renderList(true); };
+        chipsSel.appendChild(chip);
+      });
+
+      // boutons DUO activables
+      $$('#list [data-d]').forEach(b=>{
+        const name = b.getAttribute('data-d');
+        const can = wiz.mixteMode && wiz.selected.has(name) && !wiz.inDuo.has(name);
+        b.disabled = !can;
+      });
+
+      // aperçu mixte
+      renderDuosPreview();
+    }
+    function handleDuoClick(name){
+      if(!wiz.mixteMode || !wiz.selected.has(name)) return;
+      if(wiz.inDuo.has(name)){ removeFromDuoIfPresent(name); updateSelectedUI(); return; }
+      // file d'attente
+      if(!wiz._duoQueue){ wiz._duoQueue = []; }
+      if(!wiz._duoQueue.includes(name)) wiz._duoQueue.push(name);
+      if(wiz._duoQueue.length===2){
+        const [a,b]=wiz._duoQueue.splice(0,2);
+        wiz.duos.push([a,b]); wiz.inDuo.add(a); wiz.inDuo.add(b);
+      }
+      updateSelectedUI();
+    }
+    function removeFromDuoIfPresent(name){
+      let changed=false;
+      for(let i=wiz.duos.length-1;i>=0;i--){
+        if(wiz.duos[i].includes(name)){
+          const [a,b]=wiz.duos[i]; wiz.duos.splice(i,1); wiz.inDuo.delete(a); wiz.inDuo.delete(b); changed=true;
+        }
+      }
+      if(changed) renderDuosPreview();
+    }
+    function renderDuosPreview(){
+      duosDisplay.innerHTML = "";
+      if(!wiz.mixteMode){ duosDisplay.innerHTML = `<span class="muted">Mode mixte désactivé.</span>`; return; }
+      [...wiz.duos].forEach(pair=>{
+        const pill = document.createElement('span'); pill.className='chip';
+        pill.innerHTML = `${sanitize(pair[0])} + ${sanitize(pair[1])} <button class="x">✕</button>`;
+        pill.querySelector('.x').onclick = ()=>{
+          const i = wiz.duos.findIndex(d=>d[0]===pair[0] && d[1]===pair[1]);
+          if(i>=0){ const [a,b]=wiz.duos[i]; wiz.duos.splice(i,1); wiz.inDuo.delete(a); wiz.inDuo.delete(b); renderDuosPreview(); updateSelectedUI(); }
+        };
+        duosDisplay.appendChild(pill);
+      });
+      const solos = [...wiz.selected].filter(n=>!wiz.inDuo.has(n));
+      if(solos.length){
+        const pill = document.createElement('span'); pill.className='chip';
+        pill.textContent = `${solos.length} joueur(s) solo`;
+        duosDisplay.appendChild(pill);
+      }
+    }
+    q.oninput = ()=>{ applyFilter(); renderList(true); };
+
+    $("#selectAllVisible").onclick = ()=>{
+      const start = wiz.page * wiz.pageSize;
+      const slice = wiz.filtered.slice(0, start + wiz.pageSize); // visibles actuellement
+      slice.forEach(s=> wiz.selected.add(s.name));
+      updateSelectedUI(); renderList(true);
+    };
+    $("#unselectAllVisible").onclick = ()=>{
+      const start = wiz.page * wiz.pageSize;
+      const slice = wiz.filtered.slice(0, start + wiz.pageSize);
+      slice.forEach(s=> wiz.selected.delete(s.name));
+      updateSelectedUI(); renderList(true);
+    };
+
+    toggleDuo.onclick = ()=>{
+      wiz.duoMode = !wiz.duoMode;
+      if(wiz.duoMode) wiz.mixteMode = false;
+      updateSelectedUI();
+    };
+    toggleMixte.onclick = ()=>{
+      wiz.mixteMode = !wiz.mixteMode;
+      if(wiz.mixteMode) wiz.duoMode = false;
+      updateSelectedUI();
+    };
+
+    $("#b2").onclick = ()=> setStep(2);
+    $("#to4").onclick = ()=> setStep(4);
+
+    /* ========= Step 4 : Modes + Lancer ========= */
+    function refreshSummary(){
+      sumName.textContent = wiz.name || "Partie sans nom";
+      sumSub.textContent  = wiz.subject || "—";
+      sumQuiz.textContent = wiz.quizTitle || "Aucun";
+      sumClasses.textContent = wiz.classes.length ? wiz.classes.join(", ") : "Toutes";
+      sumPlayers.textContent = wiz.selected.size;
+    }
+
+    function enforceNone(){
+      const off = mNone.checked;
+      [mKO,mSurvie,mMystere,mJoker,mDuel,mSteal,mTvT,mLives,mStealPts,mA,mB].forEach(el=>{
+        el.disabled = off; if(off && el.type==="checkbox") el.checked = false;
+      });
+    }
+    mNone.onchange = enforceNone;
+
+    $("#b3").onclick = ()=> setStep(3);
+    $("#start").onclick = startGame;
+
+    function groupByTwo(arr){ const res=[]; for(let i=0;i<arr.length;i+=2){ res.push(arr.slice(i,i+2)); } return res; }
+
+    function startGame(){
+      const selected = [...wiz.selected];
+      if(!selected.length){ alert("Sélectionne au moins un joueur."); return; }
+
+      // Sauvegardes pour jeu.html
+      localStorage.setItem("nomPartie", wiz.name || "Partie sans nom");
+      localStorage.setItem("modeDuo", JSON.stringify(!!wiz.duoMode));
+      localStorage.setItem("modeMixte", JSON.stringify(!!wiz.mixteMode));
+
+      if(wiz.quizTitle){
+        localStorage.setItem("quizTitle", wiz.quizTitle);
+        const qz = wiz.quizzes.find(q=>q.title===wiz.quizTitle);
+        localStorage.setItem("quizQuestions", JSON.stringify(qz?.questions || []));
+      } else {
+        localStorage.removeItem("quizTitle"); localStorage.removeItem("quizQuestions");
+      }
+
+      // Modes étendus (clés compatibles jeu.html)
+      const tvt = !!mTvT.checked;
+      const modePayload = mNone.checked ? {} : {
+        ko: !!mKO.checked,
+        survie: !!mSurvie.checked,
+        survieLives: Math.max(1, parseInt(mLives.value||"3",10)),
+        mystere: !!mMystere.checked,
+        joker: !!mJoker.checked,
+        duel: !!mDuel.checked,
+        steal: !!mSteal.checked,
+        stealPts: Math.max(1, parseInt(mStealPts.value||"1",10)),
+        teamvs: tvt,
+        teamA: (mA.value.trim()||"Équipe A"),
+        teamB: (mB.value.trim()||"Équipe B")
+      };
+      localStorage.setItem("gameModes", JSON.stringify(modePayload));
+
+      // Construction des paramètres d’URL
+      if(wiz.mixteMode){
+        const solos = selected.filter(n=>!wiz.inDuo.has(n)).map(n=>[n]);
+        const teams = [...wiz.duos.map(d=>[d[0],d[1]]), ...solos];
+        if(!teams.length){ alert("Crée au moins un duo ou laisse des joueurs en solo."); return; }
+        location.href = `jeu.html?teams=${encodeURIComponent(JSON.stringify(teams))}&subject=${encodeURIComponent(wiz.subject)}`;
+        return;
+      }
+
+      if(wiz.duoMode){
+        if(selected.length % 2 !== 0){ alert("En mode duo, le nombre de joueurs doit être pair."); return; }
+        const groupes = groupByTwo(selected);
+        location.href = `jeu.html?duos=${encodeURIComponent(JSON.stringify(groupes))}&subject=${encodeURIComponent(wiz.subject)}`;
+      } else {
+        location.href = `jeu.html?students=${encodeURIComponent(JSON.stringify(selected))}&subject=${encodeURIComponent(wiz.subject)}`;
+      }
+    }
+
+    /* ========= Init ========= */
+    (function init(){
+      // Empêche la reprise d'état quand on revient en arrière (bfcache)
+      window.addEventListener('pageshow', (e)=>{
+        if (e.persisted) { window.location.reload(); }
+      });
+
+      // Optionnel : purger d’anciens résidus (sans toucher à une partie en cours dans jeu.html)
+      ["nomPartie","quizTitle","quizQuestions","modeDuo","modeMixte"].forEach(k=>localStorage.removeItem(k));
+
+      // Forcer un formulaire vierge
+      nom.value = "";
+      wiz.name = "";
+      wiz.subject = "Français";
+      matiere.value = "Français";
+      wiz.quizTitle = "";
+      quizSel.value = "";
+
+      // UI initiale
+      refreshClassesUI();
+      refreshQuizOptions();
+      setStep(1);
+    })();
+  </script>
+</body>
+</html>

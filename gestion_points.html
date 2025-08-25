@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestion des points</title>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/3502/3502458.png">
+  <style>
+    body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#fdfbfb,#ebedee);padding:36px}
+    .wrap{max-width:1100px;margin:auto;background:#fff;border-radius:24px;box-shadow:0 12px 30px rgba(0,0,0,.12);padding:24px}
+    h1{margin:0 0 16px;color:#333;text-align:center}
+    .tools{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:10px 0 16px}
+    select,input{padding:10px 12px;border-radius:10px;border:1px solid #ccc}
+    table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    th,td{text-align:left;padding:10px}
+    thead th{color:#666}
+    tbody tr{background:#fafafa}
+    tbody tr td:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px}
+    tbody tr td:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px}
+    .ctrls button{margin:0 3px;padding:6px 10px;border:none;border-radius:8px;cursor:pointer}
+    .plus{background:#81c784;color:#fff}
+    .minus{background:#e57373;color:#fff}
+    .apply{background:#d45c94;color:#fff}
+    .save{background:#5e35b1;color:#fff}
+    .back{display:block;text-align:center;margin-top:12px;color:#666;text-decoration:none}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff0f6;color:#bb3d7a;border:1px solid #d45c94;font-size:12px;margin-right:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🧮 Gestion des points</h1>
+    <div class="tools">
+      <select id="classeFilter"><option value="">Toutes les classes</option></select>
+      <input id="search" type="text" placeholder="Rechercher un élève">
+      <select id="subjectAttribution">
+        <option value="">Attribuer à une matière (optionnel)</option>
+        <option>Français</option><option>Maths</option><option>Histoire</option><option>SVT</option><option>Anglais</option>
+      </select>
+      <input id="bulkValue" type="number" placeholder="Points (+/-)">
+      <button class="apply" onclick="bulkApply()">Appliquer aux cochés</button>
+      <button class="save" onclick="saveAll()">💾 Enregistrer tout</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="checkAll"></th>
+          <th>Élève</th>
+          <th>Classe</th>
+          <th>Total</th>
+          <th>Matières</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <a class="back" href="admin_tools.html">⬅️ Outils d’administration</a>
+  </div>
+
+  <script>
+    // Rediriger si non déverrouillé par PIN
+    if (sessionStorage.getItem('adminToolsUnlocked') !== 'true') {
+      window.location.href = 'admin_tools.html';
+    }
+
+    let students = JSON.parse(localStorage.getItem('students') || '[]');
+
+    const rows = document.getElementById('rows');
+    const classeFilter = document.getElementById('classeFilter');
+    const search = document.getElementById('search');
+    const subjectAttribution = document.getElementById('subjectAttribution');
+    const checkAll = document.getElementById('checkAll');
+
+    // classes
+    const classes = [...new Set(students.map(s=>s.classe).filter(Boolean))].sort();
+    classes.forEach(c=>{
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c; classeFilter.appendChild(opt);
+    });
+
+    classeFilter.addEventListener('change', render);
+    search.addEventListener('input', render);
+    checkAll.addEventListener('change', () => {
+      document.querySelectorAll('.row-check').forEach(cb => cb.checked = checkAll.checked);
+    });
+
+    function render() {
+      rows.innerHTML = '';
+      const term = search.value.trim().toLowerCase();
+      const cls = classeFilter.value;
+
+      students.forEach((s, idx) => {
+        if (cls && s.classe !== cls) return;
+        if (term && !s.name.toLowerCase().includes(term)) return;
+
+        const tr = document.createElement('tr');
+
+        const matiers = s.subjects || {};
+        const pills = Object.entries(matiers).map(([m,v])=>`<span class="pill">${m}: ${v}</span>`).join(' ');
+
+        tr.innerHTML = `
+          <td><input type="checkbox" class="row-check" data-i="${idx}"></td>
+          <td>${s.name}</td>
+          <td>${s.classe||'—'}</td>
+          <td><b id="pts-${idx}">${s.points||0}</b></td>
+          <td>${pills||'—'}</td>
+          <td class="ctrls">
+            <button class="minus" onclick="addPts(${idx}, -1)">-1</button>
+            <button class="plus" onclick="addPts(${idx}, 1)">+1</button>
+            <button class="plus" onclick="addPts(${idx}, 5)">+5</button>
+            <input type="number" id="val-${idx}" placeholder="+/-" style="width:80px;margin-left:6px">
+            <button class="apply" onclick="applyCustom(${idx})">OK</button>
+          </td>
+        `;
+        rows.appendChild(tr);
+      });
+    }
+
+    function addPts(i, d){
+      const subject = subjectAttribution.value.trim();
+      students[i].points = (students[i].points||0) + d;
+      if (subject) {
+        students[i].subjects = students[i].subjects || {};
+        students[i].subjects[subject] = (students[i].subjects[subject]||0) + d;
+      }
+      // visuel
+      document.getElementById('pts-'+i).textContent = students[i].points;
+      render(); // pour rafraîchir les pastilles matières
+    }
+
+    function applyCustom(i){
+      const v = parseInt(document.getElementById('val-'+i).value,10);
+      if (isNaN(v) || v===0) return;
+      addPts(i, v);
+      document.getElementById('val-'+i).value = '';
+    }
+
+    function bulkApply(){
+      const v = parseInt(document.getElementById('bulkValue').value,10);
+      if (isNaN(v) || v===0) return alert('Entrez un nombre de points (positif ou négatif).');
+      const checked = [...document.querySelectorAll('.row-check:checked')];
+      if (!checked.length) return alert('Sélectionnez au moins un élève.');
+      checked.forEach(cb => addPts(parseInt(cb.dataset.i,10), v));
+      document.getElementById('bulkValue').value = '';
+    }
+
+    function saveAll(){
+      localStorage.setItem('students', JSON.stringify(students));
+      alert('Enregistré ✅');
+    }
+
+    render();
+  </script>
+</body>
+</html>

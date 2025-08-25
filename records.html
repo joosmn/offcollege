@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Tableau des Records</title>
+  <style>
+    body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#e3f2fd,#fce4ec);margin:0;padding:40px 20px;}
+    .container{max-width:1000px;margin:auto;background:#fff;border-radius:28px;padding:32px;box-shadow:0 12px 30px rgba(0,0,0,.12);}
+    h1{margin:0 0 20px;color:#333;text-align:center}
+
+    .tabs{display:flex;gap:10px;justify-content:center;margin:10px 0 25px}
+    .tab{border:2px solid #d45c94;color:#d45c94;background:#fff;border-radius:999px;padding:8px 16px;cursor:pointer;font-weight:700}
+    .tab.active{background:#d45c94;color:#fff}
+
+    .filters{display:flex;gap:12px;justify-content:center;margin-bottom:16px}
+    select{
+      appearance:none;-webkit-appearance:none;-moz-appearance:none;
+      background:#fff;border:2px solid #d45c94;border-radius:10px;
+      padding:10px 40px 10px 14px;font-size:15px;color:#444;cursor:pointer;
+      box-shadow:0 4px 10px rgba(0,0,0,.05);
+      background-image:url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D'14'%20height%3D'10'%20viewBox%3D'0%200%2014%2010'%20xmlns%3D'http%3A//www.w3.org/2000/svg'%3E%3Cpath%20fill%3D'%23d45c94'%20d%3D'M7%2010L0%200h14L7%2010z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 12px center;background-size:14px 10px
+    }
+
+    .podium{display:flex;justify-content:center;gap:14px;margin:10px 0 24px}
+    .pod{background:#fff8dc;border:2px solid gold;border-radius:16px;padding:8px 12px;min-width:140px;text-align:center;box-shadow:0 6px 18px rgba(218,165,32,.25)}
+    .pod:nth-child(2){background:#f0f7ff;border-color:#9ecbff}
+    .pod:nth-child(3){background:#fff0f0;border-color:#ffb3b3}
+    .pod .score{font-weight:900}
+
+    /* Hall of Fame */
+    .hof { margin: 18px 0 24px; }
+    .hof h2 { text-align:center; margin:0 0 12px; color:#333; }
+    .hof-cards {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap:14px;
+    }
+    .hof-card {
+  background: #fff;
+  border: 2px solid #d45c94;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.06);
+  position: relative; /* Nécessaire pour placer le prénom dedans */
+}
+    .hof-title{ font-weight:800; color:#bb3d7a; margin-bottom:6px; }
+    .hof-value{ font-size:28px; font-weight:900; color:#5e2b89; }
+    .hof-sub{ color:#666; margin-top:4px; font-size:14px; }
+
+    table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    th,td{text-align:left;padding:12px 14px}
+    th{color:#666;font-weight:700}
+    tbody tr{background:#fafafa}
+    tbody tr td:first-child{border-top-left-radius:12px;border-bottom-left-radius:12px}
+    tbody tr td:last-child{border-top-right-radius:12px;border-bottom-right-radius:12px}
+    .rank{width:60px;font-weight:800;color:#5e2b89}
+    .score{font-weight:800}
+    .badge{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff0f6;color:#bb3d7a;border:1px solid #d45c94;font-size:12px}
+    .empty{color:#777;text-align:center;margin:30px 0}
+    .back{display:block;text-align:center;margin-top:20px;color:#666;text-decoration:none}
+    .hof-desc {
+  display: block;
+  font-size: 12px;
+  color: #999;
+  margin-top: 5px;
+  font-style: italic;
+}
+
+.hof-sub {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: linear-gradient(90deg, #ffcc70, #ff8177);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  box-shadow: 0 0 12px rgba(255, 129, 119, 0.55);
+  animation: hofPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 129, 119, 0.6); }
+  50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 129, 119, 0.9); }
+  100% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 129, 119, 0.6); }
+}
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🏆 Tableau des Records</h1>
+
+    <div class="tabs">
+      <button id="tabInd" class="tab active">Individuels</button>
+      <button id="tabDuo" class="tab">Duos</button>
+    </div>
+
+    <div class="filters">
+      <select id="subjectFilter">
+        <option value="">Toutes matières</option>
+        <option>Français</option><option>Maths</option><option>Histoire</option>
+        <option>SVT</option><option>Anglais</option>
+      </select>
+      <select id="limitFilter">
+        <option value="10">Top 10</option>
+        <option value="20">Top 20</option>
+        <option value="50">Top 50</option>
+      </select>
+    </div>
+
+    <div id="podium" class="podium" style="display:none;"></div>
+
+  <!-- Hall of Fame -->
+<div class="hof">
+  <h2>🏅 Hall of Fame</h2>
+  <div class="hof-cards">
+
+    <div class="hof-card">
+      <div class="hof-title">Plus longue série</div>
+      <div class="hof-value" id="bestWinStreak">—</div>
+      <div class="hof-sub" id="bestWinStreakWho"></div>
+      <small class="hof-desc"><em>Nombre maximum de victoires consécutives remportées par un élève, sans défaite.</em></small>
+    </div>
+
+    <div class="hof-card">
+      <div class="hof-title">Total de victoires</div>
+      <div class="hof-value" id="mostWins">—</div>
+      <div class="hof-sub" id="mostWinsWho"></div>
+      <small class="hof-desc"><em>Nombre total de parties remportées par un élève sur toute la période enregistrée.</em></small>
+    </div>
+
+    <div class="hof-card">
+      <div class="hof-title">Série en cours</div>
+      <div class="hof-value" id="currentWinStreak">—</div>
+      <div class="hof-sub" id="currentWinStreakWho"></div>
+      <small class="hof-desc"><em>Nombre de victoires consécutives qu’un élève est en train d’enchaîner actuellement.</em></small>
+    </div>
+
+  </div>
+</div>
+
+
+
+    <table>
+      <thead>
+        <tr>
+          <th class="rank">#</th>
+          <th>Nom</th>
+          <th>Score</th>
+          <th>Matière</th>
+          <th>Partie</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <a class="back" href="admin.html">⬅️ Retour au tableau de bord</a>
+  </div>
+
+  <script>
+    // (REMPLACÉ) Ancien: records statiques
+    // const records = JSON.parse(localStorage.getItem("records") || '{"topIndividuals":[],"topDuos":[]}');
+
+    // Nouveau : construit le Top dynamiquement à partir de l'historique
+    function buildTopFromHistory() {
+      const hist = JSON.parse(localStorage.getItem("historiqueParties") || "[]");
+      const bestInd = {}; // key = "name|subject" -> {name, score, subject, partie, date}
+      const bestDuo = {}; // key = "A + B|subject" -> {duo,  score, subject, partie, date}
+
+      hist.forEach(g => {
+        const subject = g.matiere || "";
+        const partie  = g.nom || "";
+        const date    = g.dateIso || g.date || new Date().toISOString();
+
+        Object.entries(g.scores || {}).forEach(([teamKey, score]) => {
+          score = Number(score) || 0;
+          const isDuo = teamKey.includes(" + ");
+          if (isDuo) {
+            const duo = teamKey;
+            const key = `${duo}|${subject}`;
+            if (!bestDuo[key] || score > bestDuo[key].score) {
+              bestDuo[key] = { duo, score, subject, partie, date };
+            }
+          } else {
+            const name = teamKey;
+            const key = `${name}|${subject}`;
+            if (!bestInd[key] || score > bestInd[key].score) {
+              bestInd[key] = { name, score, subject, partie, date };
+            }
+          }
+        });
+      });
+
+      const topIndividuals = Object.values(bestInd)
+        .sort((a,b)=> b.score - a.score || a.name.localeCompare(b.name));
+      const topDuos = Object.values(bestDuo)
+        .sort((a,b)=> b.score - a.score || a.duo.localeCompare(b.duo));
+
+      return { topIndividuals, topDuos };
+    }
+
+    // UI
+    const tabInd = document.getElementById("tabInd");
+    const tabDuo = document.getElementById("tabDuo");
+    const tbody = document.getElementById("tbody");
+    const subjectFilter = document.getElementById("subjectFilter");
+    const limitFilter = document.getElementById("limitFilter");
+    const podium = document.getElementById("podium");
+    let mode = "ind";
+
+    function formatDate(iso){ try{ return new Date(iso).toLocaleString(); }catch(e){ return iso || ""; } }
+
+    // ---- Historique → stats de victoires et séries ----
+    function safeParseDate(d) {
+      const t = Date.parse(d);
+      return isNaN(t) ? new Date(d.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')) : new Date(t);
+    }
+
+    // ---- Historique → victoires & séries (victoire = vainqueur unique) ----
+    function computeWinStats() {
+      const hist = JSON.parse(localStorage.getItem("historiqueParties") || "[]");
+      if (!hist.length) {
+        return {
+          mostWins: { count: 0, players: [] },
+          bestStreak: { count: 0, players: [] },
+          currentStreak: { count: 0, players: [] }
+        };
+      }
+
+      const normalizeName = (s) =>
+        (s || "")
+          .normalize("NFKC")
+          .trim()
+          .replace(/\s+/g, " ");
+
+      const ordered = hist.slice(); // garde l'ordre d'enregistrement
+
+      const totalWins = {};   // total de victoires par joueur
+      const streak = {};      // série en cours
+      const best = {};        // meilleure série
+
+      for (const g of ordered) {
+        const entries = Object.entries(g.scores || {});
+        if (!entries.length) continue;
+
+        // Participants
+        const participants = new Set();
+        entries.forEach(([team]) => {
+          team.split(" + ").forEach(n => participants.add(normalizeName(n)));
+        });
+
+        // Gagnants (score max)
+        const maxScore = Math.max(...entries.map(([, v]) => Number(v) || 0));
+        const winnersTeams = entries.filter(([, v]) => (Number(v) || 0) === maxScore).map(([k]) => k);
+
+        // Vainqueurs (noms individuels)
+        const winners = new Set();
+        winnersTeams.forEach(team => {
+          team.split(" + ").forEach(n => winners.add(normalizeName(n)));
+        });
+
+        // Vainqueur unique ?
+        const uniqueWinner = winners.size === 1 ? [...winners][0] : null;
+
+        // --- Total des victoires ---
+        if (uniqueWinner) {
+          totalWins[uniqueWinner] = (totalWins[uniqueWinner] || 0) + 1;
+        }
+
+        // --- Séries : idem logique (égalité casse) ---
+        participants.forEach(n => {
+          if (streak[n] == null) streak[n] = 0;
+          if (best[n] == null) best[n] = 0;
+
+          if (uniqueWinner && n === uniqueWinner) {
+            streak[n] += 1;
+            if (streak[n] > best[n]) best[n] = streak[n];
+          } else {
+            streak[n] = 0;
+          }
+        });
+      }
+
+      const mostWinsMax = Math.max(0, ...Object.values(totalWins));
+      const bestStreakMax = Math.max(0, ...Object.values(best));
+      const currentStreakMax = Math.max(0, ...Object.values(streak));
+
+      const mostWinsPlayers = Object.entries(totalWins)
+        .filter(([, c]) => c === mostWinsMax && c > 0)
+        .map(([n]) => n);
+
+      const bestStreakPlayers = Object.entries(best)
+        .filter(([, c]) => c === bestStreakMax && c > 0)
+        .map(([n]) => n);
+
+      const currentStreakPlayers = Object.entries(streak)
+        .filter(([, c]) => c === currentStreakMax && c > 0)
+        .map(([n]) => n);
+
+      return {
+        mostWins: { count: mostWinsMax || 0, players: mostWinsPlayers },
+        bestStreak: { count: bestStreakMax || 0, players: bestStreakPlayers },
+        currentStreak: { count: currentStreakMax || 0, players: currentStreakPlayers }
+      };
+    }
+
+    function render(){
+      const subject = subjectFilter.value;
+      const limit = parseInt(limitFilter.value,10);
+
+      // Hall of Fame (inchangé)
+      const streaks = computeWinStats();
+      document.getElementById("bestWinStreak").textContent = streaks.bestStreak.count || "—";
+      document.getElementById("bestWinStreakWho").textContent = (streaks.bestStreak.players || []).join(", ") || "";
+
+      document.getElementById("mostWins").textContent = streaks.mostWins.count || "—";
+      document.getElementById("mostWinsWho").textContent = (streaks.mostWins.players || []).join(", ") || "";
+
+      document.getElementById("currentWinStreak").textContent = streaks.currentStreak.count || "—";
+      document.getElementById("currentWinStreakWho").textContent = (streaks.currentStreak.players || []).join(", ") || (streaks.currentStreak.count>0 ? "" : "—");
+
+      // Liste records : maintenant basée sur l'historique
+      const { topIndividuals, topDuos } = buildTopFromHistory();
+      const list = mode==="ind" ? topIndividuals : topDuos;
+
+      const filtered = list
+        .filter(it => !subject || (it.subject===subject))
+        .slice(0, limit);
+
+      // Podium
+      if(filtered.length >= 3){
+        podium.style.display = "flex";
+        const n0 = mode==='ind' ? filtered[0].name : filtered[0].duo;
+        const n1 = mode==='ind' ? filtered[1].name : filtered[1].duo;
+        const n2 = mode==='ind' ? filtered[2].name : filtered[2].duo;
+        podium.innerHTML = `
+          <div class="pod"><div>🥇 ${n0}</div><div class="score">${filtered[0].score} pts</div></div>
+          <div class="pod"><div>🥈 ${n1}</div><div class="score">${filtered[1].score} pts</div></div>
+          <div class="pod"><div>🥉 ${n2}</div><div class="score">${filtered[2].score} pts</div></div>
+        `;
+      } else {
+        podium.style.display = "none";
+        podium.innerHTML = "";
+      }
+
+      // Table
+      if(filtered.length===0){
+        tbody.innerHTML = `<tr><td colspan="6" class="empty">Aucun record pour le moment.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map((it, i) => `
+        <tr>
+          <td class="rank">${i+1}</td>
+          <td>${mode==='ind' ? it.name : it.duo}</td>
+          <td class="score">${it.score} pts</td>
+          <td><span class="badge">${it.subject || "-"}</span></td>
+          <td>${it.partie || "-"}</td>
+          <td>${formatDate(it.date)}</td>
+        </tr>
+      `).join("");
+    }
+
+    // events
+    tabInd.onclick = () => { mode="ind"; tabInd.classList.add("active"); tabDuo.classList.remove("active"); render(); };
+    tabDuo.onclick = () => { mode="duo"; tabDuo.classList.add("active"); tabInd.classList.remove("active"); render(); };
+    subjectFilter.onchange = render;
+    limitFilter.onchange = render;
+
+    // Auto-refresh si l'historique change (ex: nouvelle partie enregistrée)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'historiqueParties') render();
+    });
+
+    // init
+    render();
+  </script>
+</body>
+</html>

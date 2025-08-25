@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Élèves — Administration</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg1:#fffdf6; --bg2:#f1fff6;
+      --card:#ffffff; --ring:#e8eee7; --ring2:#dde7df;
+      --text:#2f3e34; --muted:#63766d;
+      --mint:#34d399; --mint2:#a7f3d0; --mint3:#d1fae5;
+      --danger:#ef4444; --amber:#fde68a;
+      --shadow:0 20px 60px rgba(17,24,39,.10); --shadow-sm:0 10px 30px rgba(17,24,39,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;min-height:100vh;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial;color:var(--text);
+      background:
+        radial-gradient(1200px 260px at 100% -10%, #eaffef 0%, transparent 60%),
+        radial-gradient(1200px 240px at 0% -10%, #fff7e0 0%, transparent 60%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+    }
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    .topbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .back{display:inline-flex;gap:8px;align-items:center;padding:8px 12px;border-radius:12px;border:1px solid var(--ring);background:#fff;cursor:pointer;font-weight:900;box-shadow:var(--shadow-sm);text-decoration:none;color:inherit}
+    .title{font-size:26px;font-weight:900;margin:0}
+    .sub{color:var(--muted);font-weight:700;margin-top:4px}
+
+    .controls{display:grid;grid-template-columns:1.3fr .7fr auto auto;gap:8px;align-items:center;margin:10px 0 16px}
+    @media (max-width: 900px){ .controls{grid-template-columns:1fr 1fr;grid-auto-rows:auto} }
+    .input{padding:12px;border:1px solid var(--ring2);border-radius:12px;background:#fff;font-weight:800;width:100%}
+    .btn{border:1px solid var(--ring);background:#fff;border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer;box-shadow:var(--shadow-sm)}
+    .btn.primary{background:linear-gradient(135deg,var(--mint),var(--mint2));color:#043b2c;border-color:transparent}
+    .btn.soft{background:#fffbeb;border-color:#f5e6a6}
+    select.input{appearance:auto}
+
+    .card{background:linear-gradient(180deg,#fff,#fbfefb);border:1px solid var(--ring);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+    .list{display:grid;gap:10px}
+    .row{
+      display:grid;grid-template-columns: auto 1fr auto;gap:10px;align-items:center;
+      background:#fff;border:1px solid var(--ring2);border-radius:14px;padding:10px 12px;box-shadow:var(--shadow-sm)
+    }
+    .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:900;
+      background:linear-gradient(135deg,var(--mint2),var(--mint));color:#043b2c}
+    .name{font-weight:900}
+    .muted{color:var(--muted);font-size:12px}
+    .actions{display:flex;gap:6px}
+    .icon-btn{border:1px solid var(--ring);background:#fff;border-radius:10px;padding:6px 8px;cursor:pointer}
+    .icon-btn.danger{color:#7f1d1d;border-color:#fecaca;background:#fff5f5}
+
+    .stat{font-size:12px;color:#0f5132;background:#ecfdf5;border:1px solid #bbf7d0;border-radius:999px;padding:2px 8px;font-weight:900}
+
+    .empty{border:1px dashed var(--ring);padding:20px;border-radius:14px;background:#fff;text-align:center;color:var(--muted);font-weight:800}
+
+    /* modal */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+    .modal{width:min(600px,96vw);background:#fff;border:1px solid var(--ring);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+    .m-head{padding:12px 14px;border-bottom:1px solid var(--ring);font-weight:900}
+    .m-body{padding:14px;display:grid;gap:10px}
+    .m-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px;border-top:1px solid var(--ring);background:#fbfefb}
+    label{font-size:12px;text-transform:uppercase;letter-spacing:.25px;color:#6b7a73;font-weight:900}
+    textarea.input{min-height:150px;white-space:pre}
+    .notice{color:#065f46;background:#ecfdf5;border:1px solid #bbf7d0;padding:8px 10px;border-radius:10px;font-weight:800}
+    .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:10px 14px;border-radius:12px;font-weight:900;display:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <a class="back" href="classes.html">⬅️ Classes</a>
+      <div>
+        <h1 class="title">Élèves</h1>
+        <div id="subtitle" class="sub">Gestion par classe</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="exportCsv" class="btn">⬇️ Export CSV</button>
+        <button id="importCsv" class="btn">⬆️ Import CSV</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input id="search" class="input" type="search" placeholder="Rechercher un élève…" />
+      <select id="classSelect" class="input"></select>
+      <input id="newStudent" class="input" placeholder="Ajouter un élève (nom complet)" />
+      <button id="addBtn" class="btn primary">Ajouter</button>
+      <button id="bulkBtn" class="btn soft">Ajout en lot</button>
+    </div>
+
+    <div id="stats" class="stat" style="display:inline-block;margin-bottom:10px;"></div>
+
+    <div class="card">
+      <div id="list" class="list"></div>
+      <div id="empty" class="empty" style="display:none;">Aucun élève pour cette classe.</div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div id="modalTitle" class="m-head">Ajout en lot</div>
+      <div class="m-body" id="modalBody"></div>
+      <div class="m-actions">
+        <button class="btn" id="cancel">Annuler</button>
+        <button class="btn primary" id="confirm">Valider</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    // ===== session guard =====
+    (function(){
+  const KEY   = 'adminSession';
+  const STEP  = 15000;             // vérif toutes les 15s
+  const IDLE  = 60 * 60 * 1000;    // 1h
+
+  function getSess(){
+    try{
+      const raw = sessionStorage.getItem(KEY) || localStorage.getItem(KEY); // compat ancien code
+      if(!raw) return null;
+      const s = JSON.parse(raw);
+      if(!s || !s.user) return null;
+      return s;
+    }catch(e){ return null; }
+  }
+  function saveSess(s){
+    try{ sessionStorage.setItem(KEY, JSON.stringify(s)); }catch(e){}
+  }
+  function redirectLogin(){
+    try { sessionStorage.removeItem(KEY); } catch(e){}
+    window.location.replace('index.html');
+  }
+  function bump(){                        // prolonge la session de 1h
+    const s = getSess();
+    if(!s) { redirectLogin(); return; }
+    s.until = Date.now() + IDLE;
+    saveSess(s);
+  }
+  function check(){                       // coupe si inactif > 1h
+    const s = getSess();
+    if(!s || !s.until || s.until <= Date.now()){
+      redirectLogin();
+    }
+  }
+
+  // Prolonge à la moindre activité utile
+  const EVENTS = ['click','keydown','mousemove','touchstart','focus'];
+  EVENTS.forEach(ev => window.addEventListener(ev, bump, {passive:true}));
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) bump(); }, {passive:true});
+
+  // Démarrage : prolonge immédiatement puis vérifie périodiquement
+  bump();
+  setInterval(check, STEP);
+})();
+
+    // ===== data layer =====
+    const LS_CLASSES = 'classes';
+    const LS_STUDENTS = 'students';
+
+    function uniq(arr){ return Array.from(new Set(arr)).filter(Boolean); }
+    function initials(str){ return (str||'').split(/\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase(); }
+
+    function loadStudents(){
+      // Migration depuis studentsByClass si présent
+      const legacy = JSON.parse(localStorage.getItem('studentsByClass') || 'null');
+      if(legacy && typeof legacy==='object'){
+        const merged = [];
+        Object.entries(legacy).forEach(([cls, names])=>{
+          (names||[]).forEach(n=>{
+            merged.push({name:n, classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString()});
+          });
+        });
+        const exist = JSON.parse(localStorage.getItem(LS_STUDENTS) || '[]');
+        const all = [...exist, ...merged];
+        localStorage.setItem(LS_STUDENTS, JSON.stringify(all));
+        localStorage.removeItem('studentsByClass');
+      }
+      return JSON.parse(localStorage.getItem(LS_STUDENTS) || '[]');
+    }
+    function saveStudents(arr){ localStorage.setItem(LS_STUDENTS, JSON.stringify(arr||[])); }
+
+    function loadClasses(){
+      let cls = JSON.parse(localStorage.getItem(LS_CLASSES) || 'null');
+      if(!Array.isArray(cls)) cls = [];
+      const fromStudents = uniq(loadStudents().map(s=>s.classe).filter(Boolean));
+      cls = uniq([...cls, ...fromStudents]);
+      localStorage.setItem(LS_CLASSES, JSON.stringify(cls));
+      return cls;
+    }
+    function saveClasses(arr){ localStorage.setItem(LS_CLASSES, JSON.stringify(arr||[])); }
+
+    // ===== UI refs =====
+    const $  = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const classSelect = $('#classSelect'), search = $('#search'), list = $('#list'), empty = $('#empty');
+    const newStudent = $('#newStudent'), addBtn = $('#addBtn'), bulkBtn = $('#bulkBtn');
+    const exportBtn = $('#exportCsv'), importBtn = $('#importCsv');
+    const stats = $('#stats'), subtitle = $('#subtitle');
+
+    const overlay = $('#overlay'), modalTitle = $('#modalTitle'), modalBody = $('#modalBody'), confirmBtn = $('#confirm'), cancelBtn = $('#cancel');
+    const toastEl = $('#toast');
+
+    function toast(msg){ toastEl.textContent = msg; toastEl.style.display='block'; setTimeout(()=> toastEl.style.display='none', 1500); }
+
+    let STUDENTS = loadStudents();
+    let CLASSES = loadClasses();
+    let currentClass = new URLSearchParams(location.search).get('classe') || (CLASSES[0] || 'Inconnue');
+
+    if(!CLASSES.includes(currentClass)) CLASSES.push(currentClass);
+    saveClasses(CLASSES);
+
+    // Fill class selector
+    function fillClassSelector(){
+      CLASSES = loadClasses();
+      classSelect.innerHTML = CLASSES.map(c=>`<option value="${c}">${c}</option>`).join('');
+      classSelect.value = currentClass;
+    }
+    fillClassSelector();
+
+    function setSubtitle(){
+      subtitle.textContent = `Gestion des élèves — Classe ${currentClass}`;
+    }
+    setSubtitle();
+
+    // Render list
+    function render(){
+      STUDENTS = loadStudents();
+      const term = (search.value||'').toLowerCase().trim();
+      const rows = STUDENTS.filter(s=>s.classe===currentClass && s.name.toLowerCase().includes(term))
+                           .sort((a,b)=> a.name.localeCompare(b.name));
+
+      list.innerHTML = '';
+      rows.forEach((s,idx)=>{
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `
+          <div class="avatar" aria-hidden="true">${initials(s.name)}</div>
+          <div>
+            <div class="name">${s.name}</div>
+            <div class="muted">Créé le ${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'} · Points ${s.points||0}</div>
+          </div>
+          <div class="actions">
+            <button class="icon-btn" title="Renommer" data-act="edit" data-name="${encodeURIComponent(s.name)}">✏️</button>
+            <button class="icon-btn" title="Reclasser" data-act="move" data-name="${encodeURIComponent(s.name)}">🧭</button>
+            <button class="icon-btn danger" title="Supprimer" data-act="del" data-name="${encodeURIComponent(s.name)}">🗑️</button>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+
+      empty.style.display = rows.length ? 'none' : 'block';
+      stats.textContent = `👥 ${rows.length} élève(s)`;
+    }
+    render();
+
+    // Class change
+    classSelect.addEventListener('change', e=>{
+      currentClass = e.target.value;
+      setSubtitle();
+      render();
+      history.replaceState(null,'',`eleves.html?classe=${encodeURIComponent(currentClass)}`);
+    });
+
+    search.addEventListener('input', render);
+
+    // Add single
+    function addOne(name){
+      const n = (name||'').trim();
+      if(!n) return;
+      // dedup within class
+      const exists = loadStudents().some(s=> s.classe===currentClass && s.name.toLowerCase()===n.toLowerCase());
+      if(exists){ toast('Déjà présent dans cette classe'); return; }
+      const rec = { name:n, classe:currentClass, points:0, subjects:{}, createdAt:new Date().toISOString() };
+      saveStudents([...loadStudents(), rec]);
+      toast('Élève ajouté'); render();
+    }
+    addBtn.addEventListener('click', ()=>{ addOne(newStudent.value); newStudent.value=''; newStudent.focus(); });
+    newStudent.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addBtn.click(); } });
+
+    // Row actions
+    list.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button[data-act]');
+      if(!btn) return;
+      const name = decodeURIComponent(btn.getAttribute('data-name'));
+      if(btn.dataset.act==='edit') openRenameModal(name);
+      if(btn.dataset.act==='move') openMoveModal(name);
+      if(btn.dataset.act==='del')  delStudent(name);
+    });
+
+    function delStudent(name){
+      if(!confirm(`Supprimer “${name}” de ${currentClass} ?`)) return;
+      const st = loadStudents().filter(s => !(s.classe===currentClass && s.name===name));
+      saveStudents(st); toast('Supprimé'); render();
+    }
+
+    function openRenameModal(oldName){
+      openModal('Renommer l’élève', `
+        <label>Nouveau nom</label>
+        <input id="nvName" class="input" value="${oldName}" />
+        <div class="notice">Les points et l’historique restent inchangés.</div>
+      `, ()=>{
+        const v = ($('#nvName').value||'').trim();
+        if(!v){ toast('Nom invalide'); return; }
+        if(v.toLowerCase()===oldName.toLowerCase()){ closeModal(); return; }
+        // de-dup
+        if(loadStudents().some(s=> s.classe===currentClass && s.name.toLowerCase()===v.toLowerCase())){
+          toast('Un élève porte déjà ce nom dans la classe'); return;
+        }
+        const st = loadStudents().map(s => (s.classe===currentClass && s.name===oldName) ? {...s, name:v} : s);
+        saveStudents(st); toast('Modifié'); closeModal(); render();
+      }, null, 'Renommer');
+    }
+
+    function openMoveModal(name){
+      const cls = loadClasses();
+      openModal('Reclasser l’élève', `
+        <div>Déplacer <b>${name}</b> vers :</div>
+        <select id="dest" class="input">${cls.map(c=>`<option value="${c}" ${c===currentClass?'selected':''}>${c}</option>`).join('')}</select>
+      `, ()=>{
+        const dest = $('#dest').value;
+        if(!dest){ toast('Choisis une destination'); return; }
+        if(dest===currentClass){ closeModal(); return; }
+        const st = loadStudents().map(s => (s.classe===currentClass && s.name===name) ? {...s, classe:dest} : s);
+        saveStudents(st); toast('Déplacé'); closeModal();
+        if(dest!==currentClass){ currentClass = dest; classSelect.value = currentClass; setSubtitle(); render(); history.replaceState(null,'',`eleves.html?classe=${encodeURIComponent(currentClass)}`); }
+      }, null, 'Déplacer');
+    }
+
+    // Bulk add modal
+    bulkBtn.addEventListener('click', ()=>{
+      openModal('Ajout en lot', `
+        <label>Noms (un par ligne)</label>
+        <textarea id="bulkArea" class="input" placeholder="Alice Martin&#10;Bob Dupont&#10;..."></textarea>
+        <div class="notice">Les doublons (dans la classe) seront ignorés.</div>
+      `, ()=>{
+        const lines = ($('#bulkArea').value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        if(!lines.length){ toast('Aucun nom'); return; }
+        const exist = loadStudents().filter(s=>s.classe===currentClass).map(s=>s.name.toLowerCase());
+        const toAdd = lines.filter(n => !exist.includes(n.toLowerCase()));
+        if(!toAdd.length){ toast('Tous étaient déjà présents'); closeModal(); return; }
+        const now = new Date().toISOString();
+        const recs = toAdd.map(n => ({name:n, classe:currentClass, points:0, subjects:{}, createdAt:now}));
+        saveStudents([...loadStudents(), ...recs]);
+        toast(`${recs.length} élève(s) ajouté(s)`); closeModal(); render();
+      }, null, 'Ajouter');
+    });
+
+    // Export CSV
+    exportBtn.addEventListener('click', ()=>{
+      const rows = loadStudents().filter(s=>s.classe===currentClass).sort((a,b)=>a.name.localeCompare(b.name));
+      const header = ['name','classe','createdAt','points'];
+      const csv = [header.join(',')].concat(rows.map(s => [s.name, s.classe, s.createdAt||'', s.points||0].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))).join('\n');
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `eleves_${currentClass}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // Import CSV (optionnel)
+    importBtn.addEventListener('click', ()=>{
+      openModal('Import CSV', `
+        <div class="notice">Format attendu : colonnes <b>name</b> et optionnellement <b>classe</b>. Les lignes vides sont ignorées.</div>
+        <input id="fileCsv" class="input" type="file" accept=".csv,text/csv" />
+      `, async ()=>{
+        const file = $('#fileCsv').files?.[0];
+        if(!file){ toast('Choisis un fichier'); return; }
+        const txt = await file.text();
+        const lines = txt.split(/\r?\n/).filter(Boolean);
+        if(!lines.length){ toast('Fichier vide'); return; }
+        const header = lines.shift().split(',').map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
+        const idxName = header.indexOf('name');
+        const idxClasse = header.indexOf('classe');
+        if(idxName<0){ toast('Colonne "name" manquante'); return; }
+        const exist = loadStudents();
+        let added = 0;
+        lines.forEach(l=>{
+          const cols = l.match(/("([^"]|"")*"|[^,]+)/g) || [];
+          const name = (cols[idxName]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim();
+          if(!name) return;
+          const cls = idxClasse>=0 ? (cols[idxClasse]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim() || currentClass : currentClass;
+          // de-dup within that class
+          if(exist.some(s=> s.classe===cls && s.name.toLowerCase()===name.toLowerCase())) return;
+          exist.push({name, classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString()});
+          if(!CLASSES.includes(cls)){ CLASSES.push(cls); }
+          added++;
+        });
+        saveStudents(exist); saveClasses(CLASSES);
+        toast(`${added} élève(s) importé(s)`); closeModal(); fillClassSelector(); render();
+      }, null, 'Importer');
+    });
+
+    // Modal helpers
+    let modalAction = null;
+    function openModal(title, bodyHtml, action, data, confirmLabel='Valider'){
+      modalTitle.textContent = title;
+      modalBody.innerHTML = bodyHtml;
+      modalAction = action;
+      confirmBtn.textContent = confirmLabel;
+      overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false');
+      setTimeout(()=> modalBody.querySelector('input,textarea,select')?.focus(), 0);
+    }
+    function closeModal(){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); modalAction=null; }
+    cancelBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+    confirmBtn.addEventListener('click', ()=>{ if(typeof modalAction==='function') modalAction(); });
+  </script>
+  <script src="storage-core.js"></script>
+
+</body>
+</html>

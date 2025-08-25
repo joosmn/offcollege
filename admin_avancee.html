@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Administration avancée</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --rose:#d45c94; --rose-dark:#bb3d7a; --violet:#5e2b89; --gray:#666;
+      --bg:#f7f8fc; --card:#fff; --ok:#22aa66; --warn:#f6b73c; --danger:#e85d5d;
+    }
+    body{font-family:'Segoe UI',system-ui,-apple-system,Arial; background:linear-gradient(135deg,#e3f2fd,#fce4ec); margin:0; padding:24px;}
+    .wrap{max-width:1100px; margin:auto; background:var(--card); border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,.1); padding:24px;}
+    h1{margin:0 0 18px; text-align:center; color:#333;}
+    .grid{display:grid; grid-template-columns: 1fr; gap:18px;}
+    @media(min-width:960px){ .grid{ grid-template-columns: 320px 1fr; } }
+    .card{background:#fff; border:2px solid #f4e1ee; border-radius:14px; padding:16px;}
+    .card h2{margin:0 0 10px; font-size:18px; color:#333;}
+    .search{display:flex; gap:8px; margin-bottom:10px}
+    .search input{flex:1; padding:10px 12px; border:2px solid #ddd; border-radius:10px;}
+    .student-list{max-height:520px; overflow:auto; display:grid; gap:8px}
+    .stu{border:1px solid #eee; border-radius:12px; padding:10px; display:flex; justify-content:space-between; align-items:center; gap:8px}
+    .meta{font-size:12px; color:#666}
+    .tags{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+    .tag{font-size:11px; background:#fff0f6; color:#bb3d7a; border:1px solid #d45c94; border-radius:999px; padding:3px 8px}
+    .tag.pin{background:#fff8dc; border-color:gold; color:#a67c00}
+    .tag.san{background:#ffe8e8; border-color:#ffb3b3; color:#b12b2b}
+    .row{display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+    button{border:none; border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:600}
+    .btn{background:#eee}
+    .btn-rose{background:var(--rose); color:#fff}
+    .btn-ghost{background:#fff; border:2px solid #ddd}
+    .btn-warn{background:var(--warn); color:#222}
+    .btn-bad{background:var(--danger); color:#fff}
+    .btn-ok{background:var(--ok); color:#fff}
+    select, input[type="text"], input[type="number"], input[type="date"]{padding:10px 12px; border:2px solid #ddd; border-radius:10px;}
+    .flex{display:flex; gap:12px; flex-wrap:wrap}
+    .section-title{font-weight:800; color:#bb3d7a; margin:10px 0 6px}
+    .list{display:grid; gap:10px}
+    .pill{display:inline-flex; align-items:center; gap:8px; border:2px solid #d45c94; color:#5e2b89; border-radius:999px; padding:6px 10px; background:#fdf2ff}
+    .pill .x{border:none; background:#ffe3ec; color:#c2185b; border-radius:8px; padding:2px 6px; cursor:pointer; font-size:12px}
+    .hl{color:var(--violet); font-weight:900}
+    .small{font-size:12px; color:#777}
+    .muted{color:#777}
+    .divider{height:1px; background:#eee; margin:12px 0}
+    .danger{color:var(--danger)}
+    .ok{color:var(--ok)}
+    /* PIN overlay */
+    .overlay{position:fixed; inset:0; background:rgba(0,0,0,.35); display:flex; align-items:center; justify-content:center; z-index:10}
+    .pin-modal{background:#fff; padding:20px; border-radius:16px; width:min(90vw,380px); box-shadow:0 10px 30px rgba(0,0,0,.2); text-align:center}
+    .pin-modal h3{margin:0 0 10px}
+    .pin-modal input{width:100%; text-align:center; letter-spacing:4px; font-weight:900; font-size:20px; margin:8px 0 12px}
+    .footer-actions{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:10px}
+    .warn-box{background:#fff8e1; border:1px solid #ffe0a6; border-radius:12px; padding:10px; font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="overlay" id="pinOverlay" aria-modal="true" role="dialog">
+    <div class="pin-modal">
+      <h3>🔒 Code PIN requis</h3>
+      <div class="small muted">Saisis le code pour accéder à l'administration avancée.</div>
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" />
+      <div class="footer-actions">
+        <button class="btn-rose" id="pinValidate">Entrer</button>
+      </div>
+      <div id="pinMsg" class="small danger" style="display:none;">Code incorrect.</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h1>⚙️ Administration avancée</h1>
+    <div class="grid">
+      <!-- Colonne gauche : liste élèves -->
+      <div class="card">
+        <h2>🎓 Élèves</h2>
+        <div class="search">
+          <input id="q" placeholder="Rechercher un élève..." />
+          <button class="btn" id="refreshBtn">🔁</button>
+        </div>
+        <div class="student-list" id="studentsList"></div>
+      </div>
+
+      <!-- Colonne droite : actions -->
+      <div class="card">
+        <h2>🛠️ Actions</h2>
+
+        <!-- Panneau sélection -->
+        <div class="section-title">Élève sélectionné</div>
+        <div id="currentSel" class="muted">Aucun élève sélectionné.</div>
+        <div class="divider"></div>
+
+        <!-- Epingler / Sanction -->
+        <div class="flex">
+          <button class="btn-rose" id="pinBtn" disabled>📌 Épingler</button>
+          <button class="btn-ghost" id="unpinBtn" disabled>📌 Retirer l'épingle</button>
+          <button class="btn-warn" id="sanctionBtn" disabled>🚫 Sanctionner</button>
+          <button class="btn-bad" id="unsanctionBtn" disabled>✅ Lever sanction</button>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Badges -->
+        <div class="section-title">🎖️ Badges personnalisés</div>
+        <div class="flex">
+          <input id="badgeInput" placeholder="Ex: Roi du Français" />
+          <button class="btn-ok" id="addBadgeBtn" disabled>Ajouter</button>
+        </div>
+        <div class="list" id="badgesBox" style="margin-top:8px;"></div>
+
+        <div class="divider"></div>
+
+        <!-- 👉 NOUVEAU : Ajuster les points -->
+        <div class="section-title">➕➖ Ajuster les points</div>
+        <div class="flex">
+          <input id="pointsDelta" type="number" value="1" min="-9999" style="width:120px" />
+          <button class="btn-ok"  id="addPtsBtn" disabled>+ Ajouter</button>
+          <button class="btn-bad" id="removePtsBtn" disabled>− Retirer</button>
+          <button class="btn-ghost" id="setPtsBtn" disabled>📝 Définir…</button>
+        </div>
+        <div class="small muted" style="margin-top:4px;">Astuce : tu peux saisir un nombre négatif pour retirer, puis “+ Ajouter”.</div>
+
+        <div class="divider"></div>
+
+        <!-- Historique -->
+        <div class="section-title">📜 Historique de l'élève</div>
+        <div id="historyBox" class="small muted">—</div>
+
+        <div class="divider"></div>
+
+        <!-- Fusion -->
+        <div class="section-title">🧬 Fusionner deux élèves</div>
+        <div class="warn-box">La fusion additionne les points & matières, remplace le nom dans les classes et l'historique.</div>
+        <div class="flex" style="margin-top:8px;">
+          <select id="mergeFrom"></select>
+          <span>→</span>
+          <select id="mergeInto"></select>
+          <button class="btn-rose" id="mergeBtn">Fusionner</button>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="footer-actions" style="margin-top:16px;">
+      <a class="btn" href="admin.html">⬅️ Retour</a>
+    </div>
+  </div>
+
+  <script>
+    // ====== PIN toujours redemandé ======
+    const PIN_CODE = localStorage.getItem("ADV_ADMIN_PIN") || "2580";
+    const pinOverlay = document.getElementById("pinOverlay");
+    const pinInput = document.getElementById("pinInput");
+    const pinMsg = document.getElementById("pinMsg");
+    document.getElementById("pinValidate").addEventListener("click", () => {
+      if (pinInput.value === PIN_CODE) {
+        pinOverlay.style.display = "none";
+      } else {
+        pinMsg.style.display = "block";
+      }
+    });
+    pinInput.addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("pinValidate").click(); });
+
+    // ====== DATA HELPERS ======
+    // ====== DATA HELPERS ======
+  const $ = sel => document.querySelector(sel);
+  const studentsList = $("#studentsList");
+  const q = $("#q");
+  const refreshBtn = $("#refreshBtn");
+
+  let students = JSON.parse(localStorage.getItem("students") || "[]");
+  let studentsByClass = JSON.parse(localStorage.getItem("studentsByClass") || "{}");
+  let history = JSON.parse(localStorage.getItem("historiqueParties") || "[]");
+
+  function saveStudents(){ localStorage.setItem("students", JSON.stringify(students)); }
+
+  // Nom d’affichage robuste
+  function getName(s){
+    return (s?.name || [s?.prenom, s?.nom].filter(Boolean).join(" ") || "").trim();
+  }
+
+  // ====== MIGRATION LEGACY -> students ======
+  (function migrateLegacy(){
+    if(!studentsByClass || typeof studentsByClass!=="object") return;
+    const seen = new Set(
+      (students||[]).map(s => (getName(s)+"|"+(s.classe||"")).toLowerCase())
+    );
+    const toAdd = [];
+    Object.entries(studentsByClass).forEach(([cls, names])=>{
+      (names||[]).forEach(n=>{
+        const key = (String(n||"").trim()+"|"+(cls||"")).toLowerCase();
+        if(!seen.has(key)){
+          toAdd.push({
+            name: String(n||"").trim(),
+            classe: cls||"",
+            points: 0,
+            subjects: {},
+            createdAt: new Date().toISOString()
+          });
+          seen.add(key);
+        }
+      });
+    });
+    if(toAdd.length){
+      students = [...students, ...toAdd];
+      saveStudents();
+    }
+    // (Optionnel) : on peut nettoyer l’ancien format après vérification
+    // localStorage.removeItem("studentsByClass");
+  })();
+
+  function findStudent(nameOrId){
+    return students.find(s => getName(s) === nameOrId);
+  }
+
+  // ====== RENDER LIST ======
+  function renderStudentsList(){
+    const term = (q.value || "").toLowerCase().trim();
+    studentsList.innerHTML = "";
+
+    const filtered = (students||[])
+      .slice()
+      .sort((a,b)=> getName(a).localeCompare(getName(b)))
+      .filter(s => {
+        if(!term) return true;
+        const nm = getName(s).toLowerCase();
+        const cl = (s.classe||"").toLowerCase();
+        return nm.includes(term) || cl.includes(term);
+      });
+
+    filtered.forEach(s => {
+      const div = document.createElement("div");
+      div.className = "stu";
+      div.innerHTML = `
+        <div>
+          <div><strong>${getName(s) || "—"}</strong> <span class="meta">(${s.classe || "?"})</span></div>
+          <div class="meta">XP : <strong>${s.points || 0}</strong></div>
+          <div class="tags">
+            ${s.pinned ? '<span class="tag pin">📌 Épinglé</span>' : ''}
+            ${s.sanction?.active ? '<span class="tag san">🚫 Sanction</span>' : ''}
+            ${(s.badges||[]).slice(0,3).map(b=>`<span class="tag">🏅 ${String(b).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}</span>`).join("")}
+            ${(s.badges||[]).length>3 ? '<span class="tag">+…</span>': '' }
+          </div>
+        </div>
+        <div class="row">
+          <button class="btn" data-act="select">Sélectionner</button>
+        </div>
+      `;
+      div.querySelector('[data-act="select"]').addEventListener("click", ()=>{
+        selectStudent(getName(s));
+      });
+      studentsList.appendChild(div);
+    });
+  }
+
+  refreshBtn.addEventListener("click", ()=>{
+    students = JSON.parse(localStorage.getItem("students") || "[]");
+    history  = JSON.parse(localStorage.getItem("historiqueParties") || "[]");
+    renderStudentsList();
+  });
+  q.addEventListener("input", renderStudentsList);
+    // ====== Panneau de droite (sélection) ======
+    let selectedName = null;
+    const currentSel = $("#currentSel");
+    const pinBtn = $("#pinBtn");
+    const unpinBtn = $("#unpinBtn");
+    const sanctionBtn = $("#sanctionBtn");
+    const unsanctionBtn = $("#unsanctionBtn");
+    const addBadgeBtn = $("#addBadgeBtn");
+    const badgeInput = $("#badgeInput");
+    const badgesBox = $("#badgesBox");
+    const historyBox = $("#historyBox");
+
+    // nouveau : points
+    const pointsDelta = $("#pointsDelta");
+    const addPtsBtn   = $("#addPtsBtn");
+    const removePtsBtn= $("#removePtsBtn");
+    const setPtsBtn   = $("#setPtsBtn");
+
+    function selectStudent(name){
+      selectedName = name;
+      const s = findStudent(name);
+      if (!s){ currentSel.textContent = "Aucun élève sélectionné."; disableActions(); return; }
+      currentSel.innerHTML = `
+        <div><strong class="hl">${escapeHtml(s.name)}</strong> <span class="muted">(${s.classe || "?"})</span></div>
+        <div class="small">XP total : <strong>${s.points || 0}</strong></div>
+      `;
+      pinBtn.disabled = !!s.pinned;
+      unpinBtn.disabled = !s.pinned;
+      sanctionBtn.disabled = !!(s.sanction && s.sanction.active);
+      unsanctionBtn.disabled = !(s.sanction && s.sanction.active);
+      addBadgeBtn.disabled = false;
+
+      // enable points controls
+      addPtsBtn.disabled = false;
+      removePtsBtn.disabled = false;
+      setPtsBtn.disabled = false;
+
+      renderBadges(s);
+      renderHistory(s.name);
+    }
+    function disableActions(){
+      pinBtn.disabled = true; unpinBtn.disabled = true; sanctionBtn.disabled = true; unsanctionBtn.disabled = true; addBadgeBtn.disabled = true;
+      addPtsBtn.disabled = true; removePtsBtn.disabled = true; setPtsBtn.disabled = true;
+      badgesBox.innerHTML = "—";
+      historyBox.textContent = "—";
+    }
+
+    function renderBadges(s){
+      const arr = s.badges || [];
+      if (!arr.length){ badgesBox.innerHTML = '<span class="small muted">Aucun badge pour le moment.</span>'; return; }
+      badgesBox.innerHTML = "";
+      arr.forEach((b, idx)=>{
+        const el = document.createElement("div");
+        el.className = "pill";
+        el.innerHTML = `🏅 ${escapeHtml(b)} <button class="x">Retirer</button>`;
+        el.querySelector(".x").addEventListener("click", ()=>{
+          s.badges.splice(idx,1);
+          saveStudents();
+          selectStudent(s.name);
+          renderStudentsList();
+        });
+        badgesBox.appendChild(el);
+      });
+    }
+
+    function renderHistory(name){
+      const items = [];
+      history.slice().forEach(h=>{
+        for (const k in h.scores){
+          const isSoloMatch = (k === name);
+          const isDuoMatch  = (k.includes(" + ") && k.split(" + ").includes(name));
+          if (isSoloMatch || isDuoMatch){
+            items.push({
+              date: h.dateIso || h.date || "",
+              partie: h.nom || "—",
+              matiere: h.matiere || "—",
+              score: h.scores[k] || 0,
+              modeDuo: !!h.modeDuo
+            });
+          }
+        }
+      });
+      if (!items.length){ historyBox.innerHTML = '<span class="small muted">Aucune partie trouvée.</span>'; return; }
+      items.sort((a,b)=> (b.date||"").localeCompare(a.date||""));
+      historyBox.innerHTML = items.map(i=>`
+        <div class="small">🗓️ ${escapeHtml(i.date)} • <strong>${escapeHtml(i.partie)}</strong> • ${escapeHtml(i.matiere)} • Score: <strong>${i.score}</strong> ${i.modeDuo ? '<span class="tag san" style="border-color:#ffd480;background:#fff3cd;color:#a66f00">DUO</span>' : ''}</div>
+      `).join("");
+    }
+
+    // ====== Actions principales ======
+    pinBtn.addEventListener("click", ()=>{
+      const s = findStudent(selectedName); if (!s) return;
+      s.pinned = true; saveStudents(); selectStudent(s.name); renderStudentsList();
+    });
+    unpinBtn.addEventListener("click", ()=>{
+      const s = findStudent(selectedName); if (!s) return;
+      s.pinned = false; saveStudents(); selectStudent(s.name); renderStudentsList();
+    });
+    sanctionBtn.addEventListener("click", ()=>{
+      const s = findStudent(selectedName); if (!s) return;
+      const reason = prompt("Raison de la sanction (optionnel) :", s.sanction?.reason || "");
+      const until  = prompt("Date de fin (YYYY-MM-DD, optionnel) :", (s.sanction?.until || "").slice(0,10));
+      s.sanction = { active:true, reason:reason||"", until:until||"" };
+      saveStudents(); selectStudent(s.name); renderStudentsList();
+    });
+    unsanctionBtn.addEventListener("click", ()=>{
+      const s = findStudent(selectedName); if (!s) return;
+      s.sanction = { active:false, reason:"", until:"" };
+      saveStudents(); selectStudent(s.name); renderStudentsList();
+    });
+
+    addBadgeBtn.addEventListener("click", ()=>{
+      const s = findStudent(selectedName); if (!s) return;
+      const val = (badgeInput.value||"").trim();
+      if (!val) return;
+      s.badges = s.badges || [];
+      if (!s.badges.includes(val)) s.badges.push(val);
+      badgeInput.value = "";
+      saveStudents(); selectStudent(s.name); renderStudentsList();
+    });
+
+    // ====== AJOUT / RETRAIT / DÉFINITION DE POINTS ======
+    function logAdjustmentFor(name, delta, reason){
+      // consigne dans historiqueParties pour que ça apparaisse dans l'historique de l'élève
+      const rec = {
+        dateIso: new Date().toISOString(),
+        nom: "Administration avancée",
+        matiere: reason || "Ajustement manuel",
+        modeDuo: false,
+        scores: { [name]: delta } // delta visible dans l'historique
+      };
+      history.push(rec);
+      localStorage.setItem("historiqueParties", JSON.stringify(history));
+    }
+
+    function adjustPoints(delta){
+      const s = findStudent(selectedName); if (!s) return;
+      const d = Number(delta);
+      if (!Number.isFinite(d) || d === 0) return;
+      s.points = (s.points || 0) + d;
+      saveStudents();
+      logAdjustmentFor(s.name, d, d>0?`+${d} points`:`${d} points`);
+      selectStudent(s.name);
+      renderStudentsList();
+    }
+
+    addPtsBtn.addEventListener("click", ()=>{
+      adjustPoints(Number(pointsDelta.value || 0));
+    });
+
+    removePtsBtn.addEventListener("click", ()=>{
+      const val = Number(pointsDelta.value || 0);
+      adjustPoints(-Math.abs(val));
+    });
+
+    setPtsBtn.addEventListener("click", ()=>{
+      const s = findStudent(selectedName); if (!s) return;
+      const cur = Number(s.points||0);
+      const val = prompt(`Nouveau total de points pour ${s.name} (actuel : ${cur}) :`, cur);
+      if (val === null) return;
+      const newTotal = Number(val);
+      if (!Number.isFinite(newTotal)) { alert("Valeur invalide."); return; }
+      const delta = newTotal - cur;
+      s.points = newTotal;
+      saveStudents();
+      logAdjustmentFor(s.name, delta, "Définition du total");
+      selectStudent(s.name);
+      renderStudentsList();
+    });
+
+    // ====== Fusion ======
+    const mergeFrom = $("#mergeFrom");
+    const mergeInto = $("#mergeInto");
+    const mergeBtn = $("#mergeBtn");
+
+    function fillMergeSelects(){
+      const opts = students.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+      [mergeFrom, mergeInto].forEach(sel=>{
+        sel.innerHTML = "";
+        opts.forEach(s=>{
+          const o = document.createElement("option");
+          o.value = s.name; o.textContent = `${s.name} (${s.classe || "?"})`;
+          sel.appendChild(o);
+        });
+      });
+    }
+
+    mergeBtn.addEventListener("click", ()=>{
+      const from = mergeFrom.value; const into = mergeInto.value;
+      if (!from || !into || from === into) { alert("Choisis deux élèves différents."); return; }
+      if (!confirm(`Fusionner "${from}" dans "${into}" ?`)) return;
+
+      const a = findStudent(from); const b = findStudent(into);
+      if (!a || !b) return;
+
+      // 1) Additionner points & matières
+      b.points = (b.points||0) + (a.points||0);
+      b.subjects = b.subjects || {};
+      (a.subjects||{}); for (const m in (a.subjects||{})){ b.subjects[m] = (b.subjects[m]||0) + (a.subjects[m]||0); }
+
+      // Conserver badges / pin / sanctions (union)
+      b.badges = Array.from(new Set([...(b.badges||[]), ...(a.badges||[])]));
+      b.pinned = b.pinned || a.pinned || false;
+      if (!b.sanction && a.sanction) b.sanction = a.sanction;
+
+      // 2) Mettre à jour studentsByClass (remplacer le nom)
+      const cls = a.classe || "";
+      if (cls && studentsByClass[cls]){
+        studentsByClass[cls] = studentsByClass[cls].map(n => n === from ? into : n);
+      }
+      localStorage.setItem("studentsByClass", JSON.stringify(studentsByClass));
+
+      // 3) Mettre à jour l'historique (remplacer clés & apparitions)
+      history.forEach(h=>{
+        if (Array.isArray(h.joueurs)){
+          h.joueurs = h.joueurs.map(item=>{
+            if (Array.isArray(item)){
+              return item.map(n => n===from ? into : n);
+            } else {
+              return item===from ? into : item;
+            }
+          });
+        }
+        const newScores = {};
+        for (const k in h.scores){
+          let newKey = k;
+          if (k === from) newKey = into;
+          if (k.includes(" + ")){
+            const parts = k.split(" + ").map(n => n===from ? into : n);
+            newKey = parts.join(" + ");
+          }
+          newScores[newKey] = (newScores[newKey]||0) + (h.scores[k]||0);
+        }
+        h.scores = newScores;
+      });
+      localStorage.setItem("historiqueParties", JSON.stringify(history));
+
+      // 4) Supprimer l’élève source
+      students = students.filter(s => s.name !== from);
+      saveStudents();
+
+      fillMergeSelects();
+      renderStudentsList();
+      alert("Fusion terminée.");
+    });
+
+    function escapeHtml(str){ return (str||"").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s])); }
+
+    // INIT
+    renderStudentsList();
+    fillMergeSelects();
+  </script>
+</body>
+</html>

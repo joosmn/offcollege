@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Quiz Collège – Administration</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      /* Crème + Mint (pastel) */
+      --bg1:#fffdf6; --bg2:#f1fff6;
+      --card:#ffffff;
+      --ring:#e8eee7; --ring-2:#dde7df;
+      --text:#2f3e34; --muted:#64766d;
+      --mint:#34d399; --mint-2:#a7f3d0; --mint-3:#d1fae5;
+      --accent:#fde68a; --danger:#ef4444;
+      --shadow:0 20px 60px rgba(17,24,39,.10);
+      --shadow-sm:0 10px 30px rgba(17,24,39,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;padding:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 260px at 100% -10%, #eaffef 0%, transparent 60%),
+        radial-gradient(1200px 240px at 0% -10%, #fff7e0 0%, transparent 60%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+      min-height:100vh;
+    }
+
+    .wrap{max-width:1100px;margin:0 auto;padding:24px}
+    .brand{
+      display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.75);
+      border:1px solid var(--ring);border-radius:16px;padding:10px 12px;backdrop-filter:blur(8px);width:max-content;box-shadow:var(--shadow-sm)
+    }
+    .logo{
+      width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--mint-2),#fff);border:1px solid var(--ring)
+    }
+    .brand b{letter-spacing:.2px}
+    .tag{font-size:12px;font-weight:900;padding:4px 8px;border-radius:999px;border:1px solid var(--ring);background:#fff}
+
+    .layout{
+      display:grid;grid-template-columns: 1.05fr .95fr;gap:20px;align-items:start;margin-top:14px;
+    }
+    @media (max-width: 900px){ .layout{grid-template-columns:1fr} }
+
+    .card{background:linear-gradient(180deg,#fff,#fbfefb);border:1px solid var(--ring);border-radius:20px;box-shadow:var(--shadow)}
+    .pane{padding:24px}
+
+    .title{font-size:36px;margin:0 0 8px;font-weight:900}
+    .subtitle{color:var(--muted);font-weight:700;margin-bottom:12px}
+
+    .features{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}
+    @media (max-width: 900px){ .features{grid-template-columns:1fr} }
+    .f{background:#ffffff;border:1px solid var(--ring);border-radius:14px;padding:10px 12px;font-weight:800;color:#1e3b32}
+    .f small{display:block;color:var(--muted);font-weight:700}
+
+    .admin-card .head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .admin-card .dot{width:12px;height:12px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff 0%,#86efac 40%,#10b981 100%);
+      box-shadow:0 0 0 4px rgba(16,185,129,.15)}
+
+    label{font-size:12px;color:#6b7a73;font-weight:900;text-transform:uppercase;letter-spacing:.25px}
+    .users{
+      display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 6px;
+    }
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;cursor:pointer;
+      background:#ffffff;border:1px solid var(--ring);font-weight:900;color:#1f3b2e;box-shadow:var(--shadow-sm);user-select:none;
+      transition:all 0.2s ease;
+    }
+    .chip:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+    .chip .av{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+      background:linear-gradient(135deg,var(--mint-2),var(--mint));color:#043b2c;font-weight:900;font-size:12px}
+    .chip.active{background:linear-gradient(180deg,#ecfdf5,#ffffff);border-color:#bbf7d0;transform:translateY(-1px)}
+    .chip.active .av{background:linear-gradient(135deg,#86efac,#34d399);color:#052e25}
+
+    .input{width:100%;padding:12px;border:1px solid var(--ring-2);border-radius:12px;background:#fff;color:#0f1e17;font-weight:800;
+      transition:border-color 0.2s ease, box-shadow 0.2s ease}
+    .input:focus{outline:none;border-color:var(--mint);box-shadow:0 0 0 3px rgba(52,211,153,.15)}
+    .pw-field{position:relative}
+    .pw-toggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:1px solid var(--ring);
+      border-radius:10px;padding:6px 8px;background:#fff;cursor:pointer;font-weight:900;color:#094b3a;transition:all 0.2s ease}
+    .pw-toggle:hover{background:var(--mint-3)}
+    
+    .row{display:grid;gap:10px}
+    .btn{
+      border:1px solid var(--ring);border-radius:14px;padding:12px 16px;font-weight:900;cursor:pointer;
+      background:#fff;color:#0f1e17;box-shadow:var(--shadow-sm);display:inline-flex;gap:10px;align-items:center;
+      transition:transform .15s ease, box-shadow .15s ease;
+    }
+    .btn:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    .btn.primary{background:linear-gradient(135deg,var(--mint),var(--mint-2));color:#043b2c;border-color:transparent;text-shadow:0 1px 0 rgba(255,255,255,.35)}
+    .mini{font-size:12px;color:var(--muted);font-weight:700;margin-top:8px}
+
+    .error{color:var(--danger);font-weight:800;margin-top:6px;display:none}
+    .notice{color:#065f46;background:#ecfdf5;border:1px solid #bbf7d0;padding:8px 10px;border-radius:10px;font-weight:800;display:none}
+    .shake{animation:shake .3s ease-in-out}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+    /* Nouvelles améliorations */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:16px}
+    .stat-card{
+      background:rgba(255,255,255,.8);border:1px solid var(--ring);border-radius:16px;padding:14px;text-align:center;
+      box-shadow:var(--shadow-sm);backdrop-filter:blur(4px);
+    }
+    .stat-number{font-size:24px;font-weight:900;color:var(--mint);margin-bottom:4px}
+    .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;font-weight:800}
+
+    .quick-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:16px}
+    .action-card{
+      background:#fff;border:1px solid var(--ring);border-radius:16px;padding:16px;box-shadow:var(--shadow-sm);
+      transition:transform 0.2s ease, box-shadow 0.2s ease;cursor:pointer;
+    }
+    .action-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    .action-icon{font-size:28px;margin-bottom:8px}
+    .action-title{font-weight:900;margin-bottom:4px;color:var(--text)}
+    .action-desc{font-size:13px;color:var(--muted);line-height:1.4}
+
+    .loading-indicator{
+      display:inline-block;width:16px;height:16px;border:2px solid var(--ring);border-top:2px solid var(--mint);
+      border-radius:50%;animation:spin 1s linear infinite;margin-left:8px;
+    }
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+
+    .version-info{
+      position:fixed;bottom:16px;right:16px;background:rgba(255,255,255,.9);
+      border:1px solid var(--ring);border-radius:10px;padding:6px 10px;
+      font-size:10px;color:var(--muted);backdrop-filter:blur(4px);
+    }
+
+    .session-indicator{
+      position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;
+      background:var(--mint);box-shadow:0 0 0 3px rgba(52,211,153,.2);
+    }
+    .session-indicator.warning{background:#f59e0b}
+    .session-indicator.error{background:var(--danger)}
+
+    
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24"><path fill="#065f46" d="M12 3c-4.97 0-9 1.79-9 4v10c0 2.21 4.03 4 9 4s9-1.79 9-4V7c0-2.21-4.03-4-9-4"/><path fill="#a7f3d0" d="M7.5 10.5h9v1.5h-9zM7.5 13.5h5v1.5h-5z"/></svg>
+      </div>
+      <b>Quiz Collège</b>
+      <span class="tag">Administration</span>
+      <div class="session-indicator" id="sessionStatus" title="Statut de connexion"></div>
+    </div>
+
+    <div class="layout">
+      <!-- Présentation améliorée -->
+      <div class="card">
+        <div class="pane">
+          <h1 class="title">Bienvenue 👋</h1>
+          <div class="subtitle">Connecte-toi pour gérer les classes, créer des quiz et lancer des parties interactives.</div>
+          
+          <!-- Statistiques rapides -->
+          <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+              <div class="stat-number" id="studentsCount">—</div>
+              <div class="stat-label">Élèves</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="quizzesCount">—</div>
+              <div class="stat-label">Quiz</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number" id="gamesCount">—</div>
+              <div class="stat-label">Parties</div>
+            </div>
+          </div>
+
+          <div class="features">
+            <div class="f">🎯 Quiz par matière <small>Français, Maths, Histoire…</small></div>
+            <div class="f">👥 Modes de jeu <small>Solo, Duo, Mixte, Équipe vs Équipe</small></div>
+            <div class="f">📊 Résultats en 1 clic <small>Historique & récap</small></div>
+            <div class="f">🧩 Questions variées <small>Texte, QCM, Vrai/Faux, Image</small></div>
+          </div>
+
+          <!-- Actions rapides pour utilisateurs connectés -->
+          <div class="quick-actions" id="quickActions" style="display:none;">
+            <div class="action-card" onclick="window.location.href='partie.html'">
+              <div class="action-icon">🎮</div>
+              <div class="action-title">Nouvelle partie</div>
+              <div class="action-desc">Créer et lancer une partie de quiz</div>
+            </div>
+            <div class="action-card" onclick="window.location.href='admin.html'">
+              <div class="action-icon">⚙️</div>
+              <div class="action-title">Tableau de bord</div>
+              <div class="action-desc">Gérer élèves, quiz et historique</div>
+            </div>
+          </div>
+          
+          <div class="mini">Astuce : l'accès admin est réservé à <b>Jordan</b>, <b>Fabienne</b> et <b>Marie</b>.</div>
+        </div>
+      </div>
+
+      <!-- Connexion admin améliorée -->
+      <div class="card admin-card">
+        <div class="pane">
+          <div class="head">
+            <span class="dot"></span>
+            <b>Connexion administrateur</b>
+          </div>
+
+          <label>Choisir un compte</label>
+          <div class="users" id="userChips">
+            <div class="chip" data-user="Jordan"><span class="av">J</span>Jordan</div>
+            <div class="chip" data-user="Fabienne"><span class="av">F</span>Fabienne</div>
+            <div class="chip" data-user="Marie"><span class="av">M</span>Marie</div>
+          </div>
+
+          <div class="row" style="margin-top:10px">
+            <label for="password">Mot de passe</label>
+            <div class="pw-field">
+              <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password">
+              <button type="button" class="pw-toggle" data-target="password" aria-label="Afficher / masquer">👁</button>
+            </div>
+
+            <div id="notice" class="notice"></div>
+            <div id="error" class="error">Sélectionne un compte et saisis le mot de passe.</div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+              <button class="btn primary" id="loginBtn" type="button">
+                Se connecter
+                <span id="loginSpinner" class="loading-indicator" style="display:none;"></span>
+              </button>
+            </div>
+            
+            <div class="mini">
+              Sécurité : session courte (<span id="sessionDuration">15</span> min), verrouillage après <span id="maxAttempts">5</span> tentatives.
+              <br>Dernière connexion : <span id="lastLogin">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="version-info">v2.1.0</div>
+
+  <script>
+    // ====== Utilitaires & constantes ======
+    const $  = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+
+    // Comptes & mots de passe (valeurs par défaut NON affichées)
+    const DEFAULT_USERS = {
+      Jordan:   "Jordan!Mint2025",
+      Fabienne: "Fabienne!Mint2025",
+      Marie:    "Marie!Mint2025"
+    };
+
+    const KEY_USERS    = "adminUsers";
+    const KEY_SESSION  = "adminSession";
+    const KEY_LOCKS    = "adminLocks";
+    const KEY_LAST_LOGIN = "lastLoginTime";
+    const SESSION_MIN  = 15;
+    const MAX_FAILS    = 5;
+    const LOCK_MIN     = 5;
+
+    function now(){ return Date.now(); }
+    function minutes(ms){ return Math.floor(ms/60000); }
+    function pad2(n){ return String(n).padStart(2,'0'); }
+    function formatDate(timestamp){ 
+      const d = new Date(timestamp);
+      return `${pad2(d.getDate())}/${pad2(d.getMonth()+1)} à ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    function sessionValid(){
+      try{
+        const raw = sessionStorage.getItem(KEY_SESSION);
+        if(!raw) return false;
+        const sess = JSON.parse(raw);
+        return sess && sess.until > now();
+      }catch(e){ return false; }
+    }
+
+    // ====== Hash functions ======
+    async function sha256Web(str){
+      const enc = new TextEncoder().encode(str);
+      const buf = await crypto.subtle.digest('SHA-256', enc);
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    
+    function hashFallback(str){
+      let h1 = 0xdeadbeef ^ str.length, h2 = 0x41c6ce57 ^ str.length;
+      for(let i=0;i<str.length;i++){
+        const ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = (h1 ^ (h1>>>16)) >>> 0;
+      h2 = (h2 ^ (h2>>>13)) >>> 0;
+      return (h1.toString(16).padStart(8,'0') + h2.toString(16).padStart(8,'0'));
+    }
+    
+    async function hash(str){
+      try{
+        if (crypto && crypto.subtle && (location.protocol === 'https:' || location.hostname === 'localhost')){
+          return await sha256Web(str);
+        }
+      }catch(e){}
+      return hashFallback(str);
+    }
+
+    // ====== User management ======
+    async function ensureUsersSeeded(){
+      const existing = JSON.parse(localStorage.getItem(KEY_USERS) || "null");
+      if(existing && typeof existing === "object") return existing;
+      const seeded = {};
+      for(const [user,pw] of Object.entries(DEFAULT_USERS)){
+        seeded[user] = { hash: await hash(pw) };
+      }
+      localStorage.setItem(KEY_USERS, JSON.stringify(seeded));
+      return seeded;
+    }
+
+    function getLocks(){
+      try{ return JSON.parse(localStorage.getItem(KEY_LOCKS) || "{}"); }
+      catch(e){ return {}; }
+    }
+    
+    function saveLocks(obj){ localStorage.setItem(KEY_LOCKS, JSON.stringify(obj||{})); }
+    
+    function clearLock(user){
+      const L = getLocks(); 
+      if(L[user]){ delete L[user]; saveLocks(L); }
+    }
+    
+    function registerFail(user){
+      const L = getLocks(); 
+      const rec = L[user] || {fails:0, until:0};
+      rec.fails = (rec.fails||0) + 1;
+      if(rec.fails >= MAX_FAILS){
+        rec.until = now() + LOCK_MIN*60*1000;
+      }
+      L[user] = rec; 
+      saveLocks(L);
+      return rec;
+    }
+    
+    function isLocked(user){
+      const L = getLocks(); 
+      const rec = L[user];
+      if(!rec) return null;
+      if(rec.until && rec.until > now()){
+        return rec;
+      }
+      return null;
+    }
+
+    // ====== UI Updates ======
+    function updateSessionIndicator(){
+      const indicator = $("#sessionStatus");
+      if(sessionValid()){
+        indicator.className = "session-indicator";
+        indicator.title = "Session active";
+      } else {
+        indicator.className = "session-indicator error";
+        indicator.title = "Non connecté";
+      }
+    }
+
+    function updateStats(){
+      const students = JSON.parse(localStorage.getItem("students") || "[]");
+      const quizzes = JSON.parse(localStorage.getItem("quizzes") || "[]");
+      const games = JSON.parse(localStorage.getItem("historiqueParties") || "[]");
+      
+      $("#studentsCount").textContent = students.length;
+      $("#quizzesCount").textContent = quizzes.length;
+      $("#gamesCount").textContent = games.length;
+
+      // Afficher actions rapides si connecté
+      if(sessionValid()){
+        $("#quickActions").style.display = "grid";
+      }
+    }
+
+    function updateLastLoginInfo(){
+      const lastLoginTime = localStorage.getItem(KEY_LAST_LOGIN);
+      if(lastLoginTime){
+        $("#lastLogin").textContent = formatDate(parseInt(lastLoginTime));
+      }
+      $("#sessionDuration").textContent = SESSION_MIN;
+      $("#maxAttempts").textContent = MAX_FAILS;
+    }
+
+    function selectChip(user){
+      $$("#userChips .chip").forEach(c => {
+        c.classList.toggle("active", c.dataset.user===user);
+      });
+    }
+
+    function showError(msg){
+      const e = $("#error");
+      e.textContent = msg; 
+      e.style.display = "block";
+      const card = e.closest(".card"); 
+      if(card){ 
+        card.classList.remove("shake"); 
+        void card.offsetWidth; 
+        card.classList.add("shake"); 
+      }
+    }
+    
+    function hideError(){ $("#error").style.display = "none"; }
+    
+    function showNotice(msg){
+      const n = $("#notice"); 
+      n.textContent = msg; 
+      n.style.display = "block";
+    }
+    
+    function hideNotice(){ $("#notice").style.display = "none"; }
+
+    function showLoading(show = true){
+      const spinner = $("#loginSpinner");
+      const btn = $("#loginBtn");
+      spinner.style.display = show ? "inline-block" : "none";
+      btn.disabled = show;
+    }
+
+    // ====== Event handlers ======
+    let CURRENT_USER = null;
+
+    $$("#userChips .chip").forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        CURRENT_USER = chip.dataset.user;
+        selectChip(CURRENT_USER);
+        hideError(); 
+        hideNotice();
+        $("#password").focus();
+      });
+    });
+
+    $$(".pw-toggle").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.getAttribute("data-target");
+        const input = document.getElementById(id);
+        input.type = input.type === "password" ? "text" : "password";
+        btn.textContent = input.type === "password" ? "👁" : "🙈";
+        input.focus();
+      });
+    });
+
+    async function login(){
+      hideError(); 
+      hideNotice();
+      showLoading(true);
+      
+      const user = CURRENT_USER;
+      const pass = ($("#password").value || "").trim();
+
+      // Validation
+      if(!user){ 
+        showError("Sélectionne un compte."); 
+        showLoading(false);
+        return; 
+      }
+
+      const locked = isLocked(user);
+      if(locked){
+        const r = new Date(locked.until);
+        showNotice(`Compte temporairement verrouillé jusqu'à ${pad2(r.getHours())}:${pad2(r.getMinutes())}.`);
+        showLoading(false);
+        return;
+      }
+
+      if(!pass){ 
+        showError("Entre le mot de passe."); 
+        showLoading(false);
+        return; 
+      }
+
+      try {
+        const users = await ensureUsersSeeded();
+        const rec = users[user];
+        if(!rec){ 
+          showError("Compte introuvable."); 
+          showLoading(false);
+          return; 
+        }
+
+        const tryHash = await hash(pass);
+        if(tryHash !== rec.hash){
+          const st = registerFail(user);
+          if(st.until && st.until > now()){
+            const r = new Date(st.until);
+            showError(`Trop d'essais. Compte verrouillé jusqu'à ${pad2(r.getHours())}:${pad2(r.getMinutes())}.`);
+          } else {
+            const left = Math.max(0, MAX_FAILS - (st.fails||0));
+            showError(left>0 ? `Mot de passe incorrect. (${left} essai${left>1?'s':''} restant${left>1?'s':''})` : `Mot de passe incorrect.`);
+          }
+          showLoading(false);
+          return;
+        }
+
+        // Succès
+        clearLock(user);
+        localStorage.setItem(KEY_LAST_LOGIN, now().toString());
+        
+        // Session courte (15 min) en sessionStorage uniquement
+        const until = Date.now() + SESSION_MIN*60*1000;
+        sessionStorage.setItem(KEY_SESSION, JSON.stringify({user, until}));
+
+        showNotice("Connexion réussie ! Redirection...");
+        
+        setTimeout(() => {
+          window.location.href = "admin.html";
+        }, 800);
+        
+      } catch(error) {
+        console.error("Erreur lors de la connexion:", error);
+        showError("Erreur technique. Réessaye dans un moment.");
+        showLoading(false);
+      }
+    }
+
+    $("#loginBtn").addEventListener("click", login);
+    $("#password").addEventListener("keydown", e=>{
+      if(e.key==="Enter"){ 
+        e.preventDefault(); 
+        login(); 
+      }
+    });
+
+    // ====== Initialisation ======
+    (async function init(){
+      await ensureUsersSeeded();
+      updateSessionIndicator();
+      updateStats();
+      updateLastLoginInfo();
+      
+      if(sessionValid()){
+        window.location.href = "admin.html";
+        return;
+      }
+      
+      // Option : présélectionner le dernier user utilisé
+      try{
+        const sess = JSON.parse(sessionStorage.getItem(KEY_SESSION) || "null");
+        if(sess && sess.user){ 
+          CURRENT_USER = sess.user; 
+          selectChip(CURRENT_USER); 
+        }
+      }catch(e){}
+
+      // Mettre à jour les statistiques périodiquement
+      setInterval(updateStats, 30000); // Toutes les 30 secondes
+    })();
+
+    // Gestion du focus automatique
+    window.addEventListener('load', () => {
+      if(!sessionValid()) {
+        $("#password").focus();
+      }
+    });
+  </script>
+</body>
+</html>

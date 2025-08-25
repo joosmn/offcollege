@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Classement Général</title>
+<style>
+:root {
+  --bg: #f8faf9;
+  --mint: #a7f3d0;
+  --mint-strong: #34d399;
+  --text: #0f172a;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --gold: #fbbf24;
+  --silver: #d1d5db;
+  --bronze: #f59e0b;
+}
+body {
+  font-family: system-ui, sans-serif;
+  background: linear-gradient(160deg,#fff,#f8faf9 40%,#e6fff3 100%);
+  margin: 0;
+  padding: 20px;
+  color: var(--text);
+}
+.container {
+  max-width: 1000px;
+  margin: auto;
+  background: white;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+h1 {
+  text-align: center;
+  margin-bottom: 15px;
+}
+.search-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 8px;
+}
+.search-box input {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font-size: 15px;
+  width: 300px;
+}
+.search-box .icon {
+  font-size: 18px;
+  color: var(--muted);
+}
+.podium {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 30px 0 40px;
+  flex-wrap: wrap;
+}
+.podium .player {
+  text-align: center;
+}
+.podium .avatar {
+  width: 90px; height: 90px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; color: white;
+}
+.podium .name { margin-top: 6px; font-weight: 600; }
+.podium .score { color: var(--mint-strong); font-weight: 700; }
+.list { display: flex; flex-direction: column; gap: 10px; }
+.item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 14px;
+  background: #fdfdfd; border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.item:hover { background: #f8fdfb; }
+.item .left { display: flex; align-items: center; gap: 10px; }
+.avatar-small {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: white;
+}
+.score { font-weight: 700; color: var(--mint-strong); }
+.details-btn {
+  background: var(--mint);
+  border: none; border-radius: 8px;
+  padding: 4px 8px; font-size: 12px; cursor: pointer;
+  color: #064e3b;
+  transition: background 0.2s;
+}
+.details-btn:hover {
+  background: var(--mint-strong);
+  color: white;
+}
+.modal {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+.modal.active { opacity: 1; pointer-events: auto; }
+.modal-content {
+  background: white; border-radius: 16px; padding: 20px;
+  max-width: 400px; width: 90%;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+.modal-header { font-weight: 700; font-size: 18px; margin-bottom: 10px; }
+.modal-body { font-size: 14px; line-height: 1.5; }
+.close-btn {
+  margin-top: 15px;
+  background: var(--mint); border: none; padding: 8px 14px;
+  border-radius: 8px; cursor: pointer; font-weight: 600; color: #064e3b;
+}
+.close-btn:hover {
+  background: var(--mint-strong);
+  color: white;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🏆 Classement Général</h1>
+  <div class="search-box">
+    <span class="icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Rechercher un élève...">
+  </div>
+  <div class="podium" id="podium"></div>
+  <div class="list" id="rankingList"></div>
+</div>
+
+<div class="modal" id="detailsModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-content">
+    <div class="modal-header" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <button class="close-btn" onclick="closeModal()">Fermer</button>
+  </div>
+</div>
+
+<script>
+function getInitials(name) {
+  return name.split(" ").map(n => n[0]).join("").toUpperCase();
+}
+function getColor(i) {
+  const colors = ["#f87171","#60a5fa","#34d399","#fbbf24","#a78bfa","#f472b6","#fb923c"];
+  return colors[i % colors.length];
+}
+function aggregatePointsIndividuels() {
+  let students = JSON.parse(localStorage.getItem("students") || "[]");
+  let pointsByName = {};
+
+  students.forEach(s => {
+    if (!s.name) return;
+
+    if (s.name.includes("+")) {
+      const members = s.name.split("+").map(n => n.trim());
+      const share = (s.points || 0) / members.length;
+      members.forEach(m => {
+        pointsByName[m] = (pointsByName[m] || 0) + share;
+      });
+    } else {
+      pointsByName[s.name] = (pointsByName[s.name] || 0) + (s.points || 0);
+    }
+  });
+
+  return Object.entries(pointsByName).sort((a, b) => b[1] - a[1]);
+}
+
+function renderRanking() {
+  const search = document.getElementById("searchInput").value.toLowerCase();
+  const list = document.getElementById("rankingList");
+  const podiumDiv = document.getElementById("podium");
+  list.innerHTML = "";
+  podiumDiv.innerHTML = "";
+
+  let ranking = aggregatePointsIndividuels();
+  if (search) ranking = ranking.filter(([name]) => name.toLowerCase().includes(search));
+
+  const top3 = ranking.slice(0, 3);
+  const colors = ['var(--gold)', 'var(--silver)', 'var(--bronze)'];
+  top3.forEach((player, i) => {
+    const div = document.createElement("div");
+    div.className = "player";
+    div.innerHTML = `
+      <div class="avatar" style="background:${colors[i]}">${getInitials(player[0])}</div>
+      <div class="name">${player[0]}</div>
+      <div class="score">${player[1].toFixed(1)} pts</div>
+    `;
+    podiumDiv.appendChild(div);
+  });
+
+  ranking.forEach(([name, score], i) => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.innerHTML = `
+      <div class="left">
+        <div class="avatar-small" style="background:${getColor(i)}">${getInitials(name)}</div>
+        <span>${i + 1}. ${name}</span>
+      </div>
+      <div class="right">
+        <span class="score">${score.toFixed(1)} pts</span>
+        <button class="details-btn" onclick="showDetails('${name}')">Détails</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function showDetails(name) {
+  let students = JSON.parse(localStorage.getItem("students") || "[]");
+  let s = students.find(st => st.name === name);
+  document.getElementById("modalTitle").textContent = `Statistiques de ${name}`;
+  let html = "";
+  if (s) {
+    html += `<strong>Classe :</strong> ${s.classe || "Inconnue"}<br>`;
+    html += `<strong>Points totaux :</strong> ${(s.points || 0).toFixed(1)}<br>`;
+    if (s.subjects) {
+      html += `<br><strong>Par matière :</strong><br>`;
+      for (const [mat, pts] of Object.entries(s.subjects)) {
+        html += ` - ${mat} : ${pts.toFixed(1)} pts<br>`;
+      }
+    }
+  } else {
+    html = "Aucune donnée trouvée.";
+  }
+  document.getElementById("modalBody").innerHTML = html;
+  document.getElementById("detailsModal").classList.add("active");
+}
+function closeModal() {
+  document.getElementById("detailsModal").classList.remove("active");
+}
+document.getElementById("searchInput").addEventListener("input", renderRanking);
+renderRanking();
+</script>
+</body>
+</html>

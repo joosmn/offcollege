@@ -1,0 +1,102 @@
+body.gradient-background {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #fdf6f0, #ffe4ec);
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.container, .admin-container {
+  text-align: center;
+  background: #ffffffdd;
+  padding: 40px;
+  border-radius: 25px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.logo {
+  width: 80px;
+  margin-bottom: 20px;
+}
+
+h1 {
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.highlight {
+  color: #f57c93;
+}
+
+.buttons .btn {
+  display: inline-block;
+  margin: 10px;
+  padding: 15px 30px;
+  font-size: 18px;
+  text-decoration: none;
+  color: white;
+  background-color: #f57c93;
+  border-radius: 50px;
+  transition: background 0.3s;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.buttons .btn:hover {
+  background-color: #e36b84;
+}
+
+#loginBox {
+  margin-top: 20px;
+}
+
+#loginBox input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  margin-right: 10px;
+}
+
+.hidden {
+  display: none;
+}
+
+.bubbles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 40px;
+}
+
+.bubble {
+  background: linear-gradient(145deg, #ffeef2, #ffffff);
+  border-radius: 50%;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bubble:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 20px rgba(0,0,0,0.2);
+}
+
+.bubble span {
+  font-size: 40px;
+}
+
+.bubble p {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+}
+

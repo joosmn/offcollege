@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Quiz — Liste & Création (Pastel)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      /* Crème + Mint */
+      --bg:#fffdf6;        /* crème */
+      --bg2:#f7fff9;       /* crème + voile mint */
+      --card:#ffffff;
+
+      --ring:#e8eee7;      /* gris-vert très clair */
+      --ring-2:#dde7df;
+
+      --text:#2f3e34;      /* texte vert/gris doux */
+      --muted:#6b7280;
+
+      --primary:#34d399;   /* mint */
+      --primary-2:#a7f3d0; /* mint clair */
+      --accent:#86efac;    /* mint pailleté */
+
+      --amber:#facc15;     /* crème dorée pour actions */
+      --danger:#ef4444;
+
+      --chip:#f5fff7;      /* pastille mint pâle */
+      --chip-b:#d9f5e6;
+
+      --shadow:0 10px 28px rgba(17,24,39,.06);
+    }
+
+    *{ box-sizing:border-box }
+    html, body{
+      margin:0; padding:0; color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background:
+        radial-gradient(1200px 200px at 0% -10%, #fff7e0, transparent 60%),
+        radial-gradient(1200px 260px at 100% -10%, #eaffef, transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+    }
+    a{ color:inherit; text-decoration:none }
+
+    .wrap{ max-width:1200px; margin:28px auto; padding:0 16px }
+
+    /* Appbar */
+    .appbar{
+      position:sticky; top:0; z-index:30; backdrop-filter: blur(8px);
+      display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:18px;
+      background:rgba(255,255,255,.9); border:1px solid var(--ring); border-radius:16px; box-shadow:var(--shadow)
+    }
+    .title{ font-weight:900; letter-spacing:.2px; display:flex; align-items:center; gap:10px }
+    .tag{ font-size:12px; font-weight:900; padding:4px 8px; border-radius:999px; background:#fff; border:1px solid var(--ring); color:var(--muted) }
+    .grow{ flex:1 }
+    .btn{
+      border:1px solid var(--ring); background:linear-gradient(180deg,#ffffff,#fbfefb); color:#1f2937;
+      border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:var(--shadow)
+    }
+    .btn.primary{
+      background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#043b2c; border-color:transparent;
+      text-shadow:0 1px 0 rgba(255,255,255,.35)
+    }
+    .btn.flat{ background:#fff; }
+    .btn.warn{ background:linear-gradient(135deg,#fef3c7,#fde68a); color:#1f2937; border-color:transparent }
+    .btn.ghost{ background:#fff; color:#1f2937 }
+    .btn:disabled{ opacity:.6; cursor:not-allowed }
+
+    /* Cards & layout */
+    .card{ background:var(--card); border:1px solid var(--ring); border-radius:16px; box-shadow:var(--shadow) }
+    .pane{ padding:16px }
+
+    /* ===== LISTE ===== */
+    #view-list .toolbar{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px }
+    .search{ flex:1; display:flex; gap:8px; flex-wrap:wrap }
+    .input, .select{
+      width:260px; padding:11px 12px; border:1px solid var(--ring-2); border-radius:12px; background:#fff; color:#0f172a; font-weight:700
+    }
+    .input{ flex:1; min-width:220px }
+
+    .list{ display:grid; gap:12px }
+    .row{
+      background:linear-gradient(180deg,#ffffff,#fbfefb);
+      border:1px solid var(--ring); border-radius:14px;
+      display:grid; grid-template-columns:1fr 280px 120px 320px; align-items:center; gap:12px; padding:12px 12px;
+    }
+    @media (max-width: 1020px){ .row{ grid-template-columns:1fr } }
+    .qtitle{ font-weight:900 }
+    .dim{ color:var(--muted); font-weight:700 }
+    .chips{ display:flex; gap:6px; flex-wrap:wrap }
+    .chip{ display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:var(--chip); border:1px solid var(--chip-b); color:#1f3b2e; font-weight:800 }
+    .actions{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end }
+    .mini{ padding:7px 10px; border-radius:10px; font-weight:800; border:1px solid var(--ring); background:#fff; color:#1f3b2e; cursor:pointer }
+    .mini.red{ background:#fff1f2; border-color:#fecdd3; color:#b91c1c }
+    .empty{ padding:18px; text-align:center; color:var(--muted); border:1px dashed var(--ring); border-radius:12px; background:#fbfefb }
+
+    /* ===== WIZARD ===== */
+    #wizard{ display:none }
+    .wizard{ display:grid; grid-template-columns: 3fr 2fr; gap:16px }
+    @media (max-width: 1000px){ .wizard{ grid-template-columns:1fr } }
+
+    .stepper{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px }
+    .step{
+      display:inline-flex; align-items:center; gap:10px; padding:8px 12px; border-radius:999px; font-weight:900;
+      background:#fafaf9; border:1px solid var(--ring); color:#3f4d43;
+    }
+    .step::before{
+      content: attr(data-n); width:22px; height:22px; display:inline-grid; place-items:center; border-radius:50%;
+      background:#d1fae5; color:#065f46; font-size:12px; font-weight:900;
+    }
+    .step.active{ background:linear-gradient(135deg,#d1fae5,#fef3c7); color:#1f2937; border-color:#e5e7eb }
+    .step.active::before{ background:#86efac; color:#064e3b }
+    .step.done{ background:#f0fdf4; color:#052e25; border-color:#bbf7d0 }
+    .step.done::before{ background:#a7f3d0; color:#052e25 }
+    .hint{ color:var(--muted); font-weight:700 }
+
+    label{ font-size:12px; color:#6b7280; font-weight:900; letter-spacing:.25px; text-transform:uppercase }
+    .row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px }
+    @media (max-width: 700px){ .row2{ grid-template-columns:1fr } }
+    .field{ display:grid; gap:6px }
+
+    .class-box{ background:#fbfefb; border:1px dashed var(--ring); border-radius:12px; padding:10px }
+    .class-chips{ display:flex; gap:8px; flex-wrap:wrap; min-height:40px }
+    .class-chip{ background:#ecfdf5; color:#065f46; border:1px solid #bbf7d0; padding:6px 10px; border-radius:999px; font-weight:900; display:inline-flex; gap:6px; align-items:center }
+    .x{ cursor:pointer; color:#b91c1c }
+
+    .qtype-bar{ display:flex; gap:6px; flex-wrap:wrap }
+    .qtype{ padding:6px 10px; border-radius:999px; border:1px solid var(--ring); background:#fff; color:#0f172a; cursor:pointer; font-weight:900 }
+    .qtype.active{ background:linear-gradient(135deg,var(--primary),var(--primary-2)); color:#043b2c; border-color:transparent }
+
+    .compose{ background:#fbfefb; border:1px dashed var(--ring); border-radius:12px; padding:12px; display:grid; gap:10px }
+    .compose .row3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px }
+    @media (max-width: 840px){ .compose .row3{ grid-template-columns:1fr } }
+
+    .qlist{ display:grid; gap:10px; margin-top:12px }
+    .qcard{ background:#ffffff; border:1px solid var(--ring); border-radius:12px; padding:10px }
+    .qhead{ display:flex; align-items:center; gap:10px; flex-wrap:wrap }
+    .badge{ font-size:11px; font-weight:900; padding:4px 8px; border-radius:999px; background:#f1f5f9; border:1px solid #e2e8f0; color:#0f172a }
+    .spacer{ flex:1 }
+    .pill{ padding:6px 10px; border-radius:999px; border:1px solid var(--ring); background:#fff; color:#0f172a; font-weight:800 }
+    .qact{ display:flex; gap:6px }
+    .link{ color:#0ea5a3; cursor:pointer; font-weight:800 }
+    .order{ display:flex; gap:6px }
+
+    /* Preview */
+    .preview .title{ font-size:16px; font-weight:800; color:#3f4d43 }
+    .preview-card{
+      margin-top:10px; border:1px solid var(--ring); background:linear-gradient(180deg,#ffffff,#fbfefb);
+      border-radius:12px; overflow:hidden;
+    }
+    .pv-head{ padding:12px 14px; border-bottom:1px solid var(--ring); display:flex; align-items:center; gap:10px }
+    .pv-body{ padding:14px }
+    .pv-q{ font-weight:900; margin-bottom:8px }
+    .pv-media img{ display:block; width:100%; height:auto; border-radius:10px; border:1px solid var(--ring) }
+    .pv-opts{ display:grid; gap:8px; margin-top:8px }
+    .radio{ display:inline-flex; gap:8px; align-items:center }
+
+    /* Toast */
+    .toast{
+      position: fixed; right:16px; bottom:16px; z-index:50; display:none;
+      background:#064e3b; color:#ecfdf5; border:1px solid #065f46; border-radius:12px; padding:12px 14px; min-width:240px; box-shadow:var(--shadow)
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- APP BAR -->
+    <div class="appbar">
+      <div class="title">🧠 <span id="headerTitle">Mes quiz</span> <span class="tag" id="modeTag">Liste</span></div>
+      <div class="grow"></div>
+      <button class="btn primary" id="newBtn" type="button" title="Ctrl+N">➕ Nouveau quiz</button>
+      <a class="btn flat" href="admin.html">⬅️ Retour</a>
+    </div>
+
+    <!-- ===== LISTE ===== -->
+    <div id="view-list" class="card">
+      <div class="pane">
+        <div class="toolbar">
+          <div class="search">
+            <input id="search" class="input" type="text" placeholder="🔎 Rechercher un quiz…" />
+            <select id="filterClass" class="select"><option value="">Toutes les classes</option></select>
+            <select id="sort" class="select">
+              <option value="title-asc">Titre (A→Z)</option>
+              <option value="title-desc">Titre (Z→A)</option>
+              <option value="count-desc">Questions (↓)</option>
+              <option value="count-asc">Questions (↑)</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" id="importBtn" type="button">⬆️ Importer</button>
+            <input type="file" id="importInput" accept="application/json" style="display:none;">
+          </div>
+        </div>
+
+        <div id="quizList" class="list"></div>
+        <div id="emptyList" class="empty" style="display:none;">Aucun quiz — clique sur <b>Nouveau quiz</b> pour commencer.</div>
+      </div>
+    </div>
+
+    <!-- ===== WIZARD ===== -->
+    <div id="wizard" class="card">
+      <div class="pane">
+        <div class="stepper">
+          <div id="s1" class="step active" data-n="1">Infos</div>
+          <div id="s2" class="step" data-n="2">Questions</div>
+          <div id="s3" class="step" data-n="3">Aperçu & Enregistrer</div>
+          <div class="spacer"></div>
+          <div class="hint" id="stepHint">Complète le titre et choisis au moins une classe.</div>
+        </div>
+
+        <div class="wizard">
+          <!-- Col principale -->
+          <div>
+            <!-- Step 1 -->
+            <div id="step1">
+              <div class="field">
+                <label for="wTitle">Titre du quiz</label>
+                <input id="wTitle" class="input" type="text" placeholder="Ex : Les capitales d’Europe">
+              </div>
+
+              <div style="height:10px"></div>
+
+              <div class="field">
+                <label>Classes concernées</label>
+                <div class="class-box">
+                  <div id="classChips" class="class-chips"></div>
+                  <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+                    <input id="classInput" class="input" placeholder="Saisis une classe (ex : 5eA) puis ➕">
+                    <select id="classPicker" class="select"></select>
+                    <button id="addClass" class="btn" type="button">➕ Ajouter</button>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-top:14px;">
+                <button id="toStep2" class="btn primary" type="button">Continuer →</button>
+                <button id="cancelWizard1" class="btn ghost" type="button">Annuler</button>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div id="step2" style="display:none;">
+              <div class="field">
+                <label>Composer une question</label>
+                <div class="compose">
+                  <div class="qtype-bar" id="qtypeBar">
+                    <span data-type="text" class="qtype active">Texte</span>
+                    <span data-type="qcm" class="qtype">QCM</span>
+                    <span data-type="vrai-faux" class="qtype">Vrai/Faux</span>
+                    <span data-type="image-texte" class="qtype">Image + Texte</span>
+                  </div>
+                  <input id="compQ" class="input" placeholder="Tape l’intitulé de la question… (Entrée = ajouter)">
+                  <div id="compBlock"></div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button id="addQuestion" class="btn primary" type="button">➕ Ajouter la question</button>
+                    <button id="cancelEdit" class="btn" type="button" style="display:none;">✖ Annuler la modification</button>
+                    <span class="hint">Astuce : appuie sur <b>Entrée</b> pour ajouter rapidement</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field" style="margin-top:12px;">
+                <label>Questions du quiz</label>
+                <div id="qList" class="qlist"></div>
+                <div id="qEmpty" class="empty">Aucune question pour l’instant.</div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+                <button id="back1" class="btn ghost" type="button">← Infos</button>
+                <button id="toStep3" class="btn primary" type="button">Continuer →</button>
+                <button id="cancelWizard2" class="btn ghost" type="button">Annuler</button>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div id="step3" style="display:none;">
+              <div class="field">
+                <label>Résumé</label>
+                <div class="qcard" style="background:#fbfdff;">
+                  <div style="padding:12px;">
+                    <div>• Titre : <b id="sumTitle">—</b></div>
+                    <div>• Classes : <b id="sumClasses">—</b></div>
+                    <div>• Questions : <b id="sumCount">0</b></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+                <button id="back2" class="btn ghost" type="button">← Questions</button>
+                <button id="saveQuiz" class="btn warn" type="button" title="Ctrl+S">💾 Enregistrer</button>
+                <button id="exportQuiz" class="btn" type="button">⬇️ Exporter JSON</button>
+                <button id="cancelWizard3" class="btn ghost" type="button">Annuler</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Col aperçu -->
+          <div class="card preview">
+            <div class="pane">
+              <div class="title">👀 Aperçu en direct</div>
+              <div id="pvCard" class="preview-card" style="display:none;">
+                <div class="pv-head">
+                  <span class="badge" id="pvBadge">Texte</span>
+                  <span id="pvTypeLabel" class="dim">Type</span>
+                </div>
+                <div class="pv-body">
+                  <div id="pvQ" class="pv-q"></div>
+                  <div id="pvMedia" class="pv-media" style="display:none;"></div>
+                  <div id="pvOpts" class="pv-opts"></div>
+                </div>
+              </div>
+              <div id="pvEmpty" class="empty">Commence à saisir une question pour prévisualiser.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script>
+    /* ===== Utils ===== */
+    const $  = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const sanitize = s => String(s||"").replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[ch]));
+    const toast = (m,ms=2000)=>{ const t=$("#toast"); t.textContent=m; t.style.display="block"; setTimeout(()=>t.style.display="none",ms); };
+
+    function loadQuizzes(){ return JSON.parse(localStorage.getItem("quizzes") || "[]"); }
+    function saveQuizzes(list){ localStorage.setItem("quizzes", JSON.stringify(list)); }
+    function loadClasses(){ return JSON.parse(localStorage.getItem("classes") || "[]"); }
+    function saveClasses(list){ localStorage.setItem("classes", JSON.stringify(list)); }
+
+    /* ===== Router ===== */
+    function goList(){ location.hash = "#list"; }
+  function goNew(){
+  // On nettoie tout brouillon pour repartir d'une page vierge
+  localStorage.removeItem("quizWizardDraft");
+  location.hash = "#new";
+}
+
+    function goEdit(i){ location.hash = "#edit/"+i; }
+    window.addEventListener("hashchange", syncRoute);
+
+    /* ===== LISTE ===== */
+    const listView   = $("#view-list");
+    const wizardView = $("#wizard");
+    const headerTitle= $("#headerTitle");
+    const modeTag    = $("#modeTag");
+
+    const search     = $("#search");
+    const filterClass= $("#filterClass");
+    const sortSel    = $("#sort");
+    const quizList   = $("#quizList");
+    const emptyList  = $("#emptyList");
+    const importBtn  = $("#importBtn");
+    const importInput= $("#importInput");
+    $("#newBtn").onclick = goNew;
+
+    function renderList(){
+      const quizzes = loadQuizzes();
+      // classes filter
+      const classes = loadClasses();
+      filterClass.innerHTML = `<option value="">Toutes les classes</option>` + classes.map(c=>`<option value="${sanitize(c)}">${sanitize(c)}</option>`).join("");
+
+      const needle = (search.value||"").toLowerCase().trim();
+      const classNeedle = filterClass.value||"";
+      let rows = quizzes.map((q,i)=> ({...q,_i:i}));
+      if(needle) rows = rows.filter(q=> (q.title||"").toLowerCase().includes(needle));
+      if(classNeedle) rows = rows.filter(q=> (q.classes||[]).includes(classNeedle));
+
+      const sort = sortSel.value;
+      rows.sort((a,b)=>{
+        if (sort==="title-asc") return (a.title||"").localeCompare(b.title||"");
+        if (sort==="title-desc") return (b.title||"").localeCompare(a.title||"");
+        if (sort==="count-asc") return (a.questions?.length||0)-(b.questions?.length||0);
+        if (sort==="count-desc") return (b.questions?.length||0)-(a.questions?.length||0);
+        return 0;
+      });
+
+      quizList.innerHTML = "";
+      if(!rows.length){ emptyList.style.display="block"; return; } else emptyList.style.display="none";
+
+      rows.forEach(q=>{
+        const row = document.createElement("div");
+        row.className = "row";
+        const cls = (q.classes||[]).map(c=>`<span class="chip">${sanitize(c)}</span>`).join("");
+        row.innerHTML = `
+          <div>
+            <div class="qtitle">${sanitize(q.title||"(Sans titre)")}</div>
+            <div class="dim">${q.questions?.length||0} question(s)</div>
+          </div>
+          <div class="chips">${cls || '<span class="dim">Aucune classe</span>'}</div>
+          <div class="dim">#${q._i}</div>
+          <div class="actions">
+            <button class="mini" data-act="edit">✏️ Éditer</button>
+            <button class="mini" data-act="dup">⧉ Dupliquer</button>
+            <button class="mini" data-act="export">⬇️ Exporter</button>
+            <button class="mini red" data-act="del">🗑️ Supprimer</button>
+          </div>
+        `;
+        row.querySelector('[data-act="edit"]').onclick   = ()=> goEdit(q._i);
+        row.querySelector('[data-act="dup"]').onclick    = ()=>{ const all=loadQuizzes(); all.splice(q._i+1,0,{...q,title:(q.title||"(Sans titre)")+" (copie)"}); saveQuizzes(all); renderList(); toast("Quiz dupliqué"); };
+        row.querySelector('[data-act="export"]').onclick = ()=>{ const blob=new Blob([JSON.stringify(q,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=((q.title||"quiz")+".json"); a.click(); URL.revokeObjectURL(url); };
+        row.querySelector('[data-act="del"]').onclick    = ()=>{ if(confirm("Supprimer ce quiz ?")){ const all=loadQuizzes(); all.splice(q._i,1); saveQuizzes(all); renderList(); toast("Quiz supprimé"); } };
+        quizList.appendChild(row);
+      });
+    }
+    search.oninput = renderList;
+    filterClass.onchange=renderList;
+    sortSel.onchange=renderList;
+
+    importBtn.onclick = ()=> importInput.click();
+    importInput.onchange = ()=>{
+      const f=importInput.files?.[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=()=>{
+        try{
+          const q = JSON.parse(r.result);
+          if(!q || !Array.isArray(q.questions)) throw new Error("format");
+          const all=loadQuizzes(); all.push(q); saveQuizzes(all); renderList(); toast("Quiz importé");
+        }catch(e){ alert("Fichier invalide."); }
+      };
+      r.readAsText(f);
+    };
+
+    /* ===== WIZARD STATE ===== */
+    const wiz = {
+      index: null,
+      title: "",
+      classes: [],
+      questions: [],
+      step: 1,
+      editingIndex: null,
+      comp: { type:"text", question:"", options:["","",""], reponse:"", image:"" }
+    };
+
+    // Elements
+    const stepEls   = { s1:$("#s1"), s2:$("#s2"), s3:$("#s3") };
+    const stepHint  = $("#stepHint");
+    const step1     = $("#step1"), step2=$("#step2"), step3=$("#step3");
+
+    const wTitle    = $("#wTitle");
+    const classChips= $("#classChips"), classInput=$("#classInput"), classPicker=$("#classPicker");
+    const addClass  = $("#addClass");
+
+    const toStep2   = $("#toStep2"), toStep3=$("#toStep3"), saveQuiz=$("#saveQuiz");
+    const back1     = $("#back1"), back2=$("#back2");
+    $("#cancelWizard1").onclick = goList; $("#cancelWizard2").onclick = goList; $("#cancelWizard3").onclick = goList;
+
+    const qtypeBar  = $("#qtypeBar"), compQ=$("#compQ"), compBlock=$("#compBlock");
+    const addQuestion = $("#addQuestion"), cancelEdit=$("#cancelEdit");
+    const qList     = $("#qList"), qEmpty=$("#qEmpty");
+
+    const pvCard=$("#pvCard"), pvEmpty=$("#pvEmpty"), pvBadge=$("#pvBadge"), pvTypeLabel=$("#pvTypeLabel");
+    const pvQ=$("#pvQ"), pvMedia=$("#pvMedia"), pvOpts=$("#pvOpts");
+
+    const sumTitle=$("#sumTitle"), sumClasses=$("#sumClasses"), sumCount=$("#sumCount");
+    const exportQuiz=$("#exportQuiz");
+
+    /* ===== Wizard helpers ===== */
+    function setStep(n){
+      wiz.step = n;
+      stepEls.s1.className = "step"+(n===1?" active": n>1?" done":"");
+      stepEls.s2.className = "step"+(n===2?" active": n>2?" done":"");
+      stepEls.s3.className = "step"+(n===3?" active":"");
+      stepHint.textContent = n===1 ? "Complète le titre et choisis au moins une classe." : n===2 ? "Ajoute/modifie tes questions." : "Vérifie puis enregistre.";
+      step1.style.display = (n===1?"block":"none");
+      step2.style.display = (n===2?"block":"none");
+      step3.style.display = (n===3?"block":"none");
+    }
+
+    function refreshClassesUI(){
+      classChips.innerHTML = wiz.classes.length
+        ? wiz.classes.map(c=>`<span class="class-chip">${sanitize(c)} <span class="x" data-c="${sanitize(c)}">✕</span></span>`).join("")
+        : `<span class="dim">Aucune classe</span>`;
+      $$("#classChips .x").forEach(x => x.onclick = ()=>{ wiz.classes = wiz.classes.filter(c=>c!==x.dataset.c); refreshClassesUI(); checkStep1Valid(); autoDraft(); });
+
+      const all = loadClasses();
+      const avail = all.filter(c=> !wiz.classes.includes(c));
+      classPicker.innerHTML = avail.map(c=>`<option value="${sanitize(c)}">${sanitize(c)}</option>`).join("");
+    }
+
+    function checkStep1Valid(){
+      toStep2.disabled = !(wiz.title.trim() && wiz.classes.length>0);
+    }
+
+    wTitle.oninput = ()=>{ wiz.title = wTitle.value; checkStep1Valid(); autoDraft(); };
+    addClass.onclick = ()=>{
+      const typed = classInput.value.trim();
+      const pick = classPicker.value;
+      const val = typed || pick;
+      if(!val) return;
+      if(!wiz.classes.includes(val)) wiz.classes.push(val);
+      const all = loadClasses();
+      if(val && !all.includes(val)){ all.push(val); saveClasses(all); }
+      classInput.value=""; refreshClassesUI(); checkStep1Valid(); autoDraft();
+    };
+
+    toStep2.onclick = ()=> setStep(2);
+    back1.onclick   = ()=> setStep(1);
+
+    /* ===== Composer ===== */
+    qtypeBar.addEventListener("click", (e)=>{
+      const t = e.target.closest(".qtype"); if(!t) return;
+      $$(".qtype").forEach(el=> el.classList.remove("active"));
+      t.classList.add("active");
+      wiz.comp.type = t.dataset.type;
+      renderComposeSpecific();
+      refreshPreview();
+      autoDraft();
+    });
+
+    compQ.addEventListener("input", ()=>{ wiz.comp.question = compQ.value; refreshPreview(); autoDraft(); });
+    compQ.addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addQuestion.click(); } });
+
+    function renderComposeSpecific(){
+      compBlock.innerHTML = "";
+      const t = wiz.comp.type;
+      if(t==="qcm"){
+        const wrap = document.createElement("div");
+        wrap.className="compose row3";
+        const mk = (idx,ph)=>{ const i=document.createElement("input"); i.className="input"; i.placeholder=ph; i.value=wiz.comp.options[idx]||""; i.oninput=()=>{ wiz.comp.options[idx]=i.value; refreshPreview(); autoDraft(); }; return i; }
+        wrap.appendChild(mk(0,"Option 1")); wrap.appendChild(mk(1,"Option 2")); wrap.appendChild(mk(2,"Option 3"));
+        compBlock.appendChild(wrap);
+        const ans = document.createElement("input"); ans.className="input"; ans.placeholder="Bonne réponse"; ans.value=wiz.comp.reponse||""; ans.oninput=()=>{ wiz.comp.reponse=ans.value; autoDraft(); };
+        compBlock.appendChild(ans);
+      } else if(t==="vrai-faux"){
+        const sel = document.createElement("select"); sel.className="select";
+        ["Vrai","Faux"].forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+        sel.value = wiz.comp.reponse || "Vrai"; sel.onchange=()=>{ wiz.comp.reponse=sel.value; autoDraft(); };
+        compBlock.appendChild(sel);
+      } else if(t==="image-texte"){
+        const dz = document.createElement("div");
+        dz.style.cssText = "background:#fff;border:1px dashed var(--ring);border-radius:12px;padding:12px;text-align:center";
+        dz.innerHTML = `
+          <div style="margin-bottom:8px;">Dépose une image ou clique pour choisir</div>
+          <input type="file" accept="image/*" style="display:none;">
+          <div id="imgPrev" style="display:${wiz.comp.image?'block':'none'}; margin-top:8px; border:1px solid var(--ring); border-radius:10px; overflow:hidden;">
+            <img id="imgPv" style="display:block; width:100%; height:auto;">
+          </div>
+          <div style="margin-top:8px;">
+            <input id="imgAnswer" class="input" placeholder="Réponse attendue" value="${sanitize(wiz.comp.reponse||'')}">
+          </div>
+        `;
+        const fileInput = dz.querySelector('input[type="file"]');
+        const imgPrev = dz.querySelector('#imgPrev'); const imgPv = dz.querySelector('#imgPv');
+        const imgAnswer = dz.querySelector('#imgAnswer');
+        if(wiz.comp.image){ imgPv.src = wiz.comp.image; }
+        imgAnswer.oninput = ()=>{ wiz.comp.reponse = imgAnswer.value; autoDraft(); };
+
+        dz.addEventListener("click", ()=> fileInput.click());
+        dz.addEventListener("dragover", e=>{ e.preventDefault(); dz.style.borderColor="#93c5fd"; });
+        dz.addEventListener("dragleave", ()=>{ dz.style.borderColor="var(--ring)"; });
+        dz.addEventListener("drop", e=>{
+          e.preventDefault();
+          const f = e.dataTransfer.files?.[0]; if(f) readImage(f);
+          dz.style.borderColor="var(--ring)";
+        });
+        fileInput.onchange = ()=>{ const f=fileInput.files?.[0]; if(f) readImage(f); };
+        function readImage(file){
+          const r = new FileReader();
+          r.onload = ()=>{ wiz.comp.image = r.result; imgPrev.style.display="block"; imgPv.src = r.result; refreshPreview(); autoDraft(); };
+          r.readAsDataURL(file);
+        }
+        compBlock.appendChild(dz);
+      } else {
+        const ans = document.createElement("input"); ans.className="input"; ans.placeholder="Réponse attendue"; ans.value=wiz.comp.reponse||""; ans.oninput=()=>{ wiz.comp.reponse=ans.value; autoDraft(); };
+        compBlock.appendChild(ans);
+      }
+    }
+
+    function refreshPreview(){
+      const t = wiz.comp.type, q = wiz.comp.question?.trim();
+      if(!q){ pvCard.style.display="none"; pvEmpty.style.display="block"; return; }
+      pvCard.style.display="block"; pvEmpty.style.display="none";
+      pvBadge.textContent = t==="qcm"?"QCM":t==="vrai-faux"?"Vrai/Faux":t==="image-texte"?"Image + Texte":"Texte";
+      pvTypeLabel.textContent = t;
+      pvQ.textContent = q;
+      pvMedia.style.display="none"; pvMedia.innerHTML="";
+      pvOpts.innerHTML="";
+
+      if(t==="qcm"){
+        (wiz.comp.options||[]).filter(Boolean).forEach(o=>{
+          const b=document.createElement("div"); b.className="pill"; b.textContent=o; pvOpts.appendChild(b);
+        });
+      } else if(t==="vrai-faux"){
+        pvOpts.innerHTML = `<label class="radio"><input type="radio" name="vf"> Vrai</label><label class="radio"><input type="radio" name="vf"> Faux</label>`;
+      } else if(t==="image-texte"){
+        if(wiz.comp.image){
+          pvMedia.style.display="block";
+          pvMedia.innerHTML = `<img alt="" src="${wiz.comp.image}">`;
+        }
+      }
+    }
+
+    addQuestion.onclick = ()=>{
+      const t = wiz.comp.type, q = (wiz.comp.question||"").trim();
+      if(!q){ toast("Tape la question avant d’ajouter."); return; }
+
+      const item = {
+        id: Math.random().toString(36).slice(2,9),
+        type: t,
+        question: q,
+        options: (t==="qcm" ? (wiz.comp.options||["","",""]).slice(0,3) : []),
+        reponse: (t==="vrai-faux" ? (wiz.comp.reponse||"Vrai") : (t==="qcm"||t==="text"||t==="image-texte" ? (wiz.comp.reponse||"") : "")),
+        image: (t==="image-texte" ? (wiz.comp.image||"") : "")
+      };
+
+      if (wiz.editingIndex !== null){
+        wiz.questions[wiz.editingIndex] = {...item, id: wiz.questions[wiz.editingIndex].id};
+        wiz.editingIndex = null;
+        addQuestion.textContent = "➕ Ajouter la question";
+        cancelEdit.style.display = "none";
+        toast("Question mise à jour ✔");
+      } else {
+        wiz.questions.push(item);
+        toast("Question ajoutée ✔");
+      }
+
+      // Reset composer
+      wiz.comp.question=""; wiz.comp.options=["","",""]; wiz.comp.reponse=(t==="vrai-faux"?"Vrai":""); wiz.comp.image="";
+      compQ.value=""; renderComposeSpecific(); refreshPreview(); renderQList(); autoDraft();
+    };
+
+    cancelEdit.onclick = ()=>{
+      wiz.editingIndex = null;
+      addQuestion.textContent = "➕ Ajouter la question";
+      cancelEdit.style.display = "none";
+      // reset composer
+      wiz.comp = { type: wiz.comp.type || "text", question:"", options:["","",""], reponse: (wiz.comp.type==="vrai-faux"?"Vrai":""), image:"" };
+      compQ.value=""; renderComposeSpecific(); refreshPreview();
+    };
+
+    function renderQList(){
+      qList.innerHTML=""; 
+      if(!wiz.questions.length){ qEmpty.style.display="block"; return; }
+      qEmpty.style.display="none";
+      wiz.questions.forEach((q,idx)=>{
+        const card=document.createElement("div"); card.className="qcard";
+        const head=document.createElement("div"); head.className="qhead";
+        const badge=document.createElement("span"); badge.className="badge"; badge.textContent = q.type==="qcm"?"QCM":q.type==="vrai-faux"?"Vrai/Faux":q.type==="image-texte"?"Image + Texte":"Texte";
+        const title=document.createElement("div"); title.className="pill"; title.textContent = q.question.slice(0,80) + (q.question.length>80?"…":"");
+
+        const order=document.createElement("div"); order.className="order";
+        const up=document.createElement("button"); up.className="mini"; up.textContent="⬆️"; up.onclick=()=>{ if(idx>0){ const [it]=wiz.questions.splice(idx,1); wiz.questions.splice(idx-1,0,it); renderQList(); autoDraft(); } };
+        const dn=document.createElement("button"); dn.className="mini"; dn.textContent="⬇️"; dn.onclick=()=>{ if(idx<wiz.questions.length-1){ const [it]=wiz.questions.splice(idx,1); wiz.questions.splice(idx+1,0,it); renderQList(); autoDraft(); } };
+        order.appendChild(up); order.appendChild(dn);
+
+        const actions=document.createElement("div"); actions.className="qact";
+        const edit=document.createElement("span"); edit.className="link"; edit.textContent="Modifier";
+        const dup=document.createElement("span"); dup.className="link"; dup.textContent="Dupliquer";
+        const del=document.createElement("span"); del.className="link"; del.style.color="#b91c1c"; del.textContent="Supprimer";
+        edit.onclick=()=> openInlineEditor(idx);
+        dup.onclick=()=>{ wiz.questions.splice(idx,0,{...q, id:Math.random().toString(36).slice(2,9)}); renderQList(); autoDraft(); toast("Dupliqué"); };
+        del.onclick=()=>{ if(confirm("Supprimer cette question ?")){ wiz.questions.splice(idx,1); renderQList(); autoDraft(); } };
+
+        head.appendChild(badge); head.appendChild(title); head.appendChild(order); head.appendChild(actions);
+        actions.appendChild(edit); actions.appendChild(dup); actions.appendChild(del);
+
+        card.appendChild(head);
+        qList.appendChild(card);
+      });
+      updateSummary();
+    }
+
+    function openInlineEditor(idx){
+      const q = wiz.questions[idx];
+      wiz.editingIndex = idx;
+      wiz.comp = {
+        type: q.type,
+        question: q.question,
+        options: (q.options||["","",""]).slice(0,3),
+        reponse: q.reponse|| (q.type==="vrai-faux"?"Vrai":""),
+        image: q.image||""
+      };
+      $$(".qtype").forEach(el=> el.classList.toggle("active", el.dataset.type===wiz.comp.type));
+      compQ.value = wiz.comp.question;
+      renderComposeSpecific();
+      refreshPreview();
+      addQuestion.textContent = "✅ Mettre à jour la question";
+      cancelEdit.style.display = "inline-flex";
+    }
+
+    toStep3.onclick = ()=>{
+      if(!wiz.questions.length){ toast("Ajoute au moins 1 question."); return; }
+      setStep(3);
+      updateSummary();
+    };
+    back2.onclick = ()=> setStep(2);
+
+    /* ===== Step 3 ===== */
+    function updateSummary(){
+      sumTitle.textContent = wiz.title || "—";
+      sumClasses.textContent = wiz.classes.length ? wiz.classes.join(", ") : "—";
+      sumCount.textContent = String(wiz.questions.length);
+    }
+
+    saveQuiz.onclick = ()=>{
+      const clean = {
+        title: wiz.title.trim(),
+        classes: wiz.classes.slice(),
+        questions: wiz.questions.map(q=>({
+          id:q.id, type:q.type, question:q.question,
+          options: Array.isArray(q.options)? q.options.slice(0,3):[],
+          reponse: q.reponse || (q.type==="vrai-faux"?"Vrai":""),
+          image: q.image || ""
+        }))
+      };
+      if(!clean.title || !clean.classes.length || !clean.questions.length){ toast("Complète le titre / classes / questions."); return; }
+
+      const all = loadQuizzes();
+      if (wiz.index===null) all.push(clean);
+      else all[wiz.index] = clean;
+      saveQuizzes(all);
+      localStorage.removeItem("quizWizardDraft");
+      toast("Quiz enregistré ✔");
+      setTimeout(goList, 400);
+    };
+
+    exportQuiz.onclick = ()=>{
+      const data = { title: wiz.title, classes: wiz.classes, questions: wiz.questions };
+      const blob = new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a=document.createElement("a"); a.href=url; a.download=(wiz.title||"quiz")+".json"; a.click(); URL.revokeObjectURL(url);
+    };
+
+    /* ===== Autosave ===== */
+    function autoDraft(){
+      if(location.hash==="#new" || location.hash.startsWith("#edit/")){
+        const draft = { ...wiz };
+        localStorage.setItem("quizWizardDraft", JSON.stringify(draft));
+      }
+    }
+    setInterval(autoDraft, 2000);
+
+    /* ===== Router sync ===== */
+    function resetWizard(){
+      wiz.index = null;
+      wiz.title = ""; wiz.classes=[]; wiz.questions=[];
+      wiz.step = 1; wiz.editingIndex = null;
+      wiz.comp = { type:"text", question:"", options:["","",""], reponse:"", image:"" };
+      wTitle.value=""; classInput.value="";
+      renderComposeSpecific(); refreshPreview(); renderQList(); refreshClassesUI(); setStep(1);
+    }
+
+    function loadIntoWizard(q, index=null){
+      wiz.index = index;
+      wiz.title = q?.title||""; wTitle.value = wiz.title;
+      wiz.classes = Array.isArray(q?.classes)? q.classes.slice():[];
+      wiz.questions = Array.isArray(q?.questions)? q.questions.map(x=>({
+        id:x.id||Math.random().toString(36).slice(2,9),
+        type:x.type||"text",
+        question:x.question||"",
+        options:Array.isArray(x.options)? x.options.slice(0,3):[],
+        reponse: x.reponse || (x.type==="vrai-faux"?"Vrai":""),
+        image: x.image || ""
+      })):[];
+      wiz.step = 1; wiz.editingIndex = null;
+      renderComposeSpecific(); refreshPreview(); renderQList(); refreshClassesUI(); setStep(1);
+    }
+
+    function syncRoute(){
+  const hash = location.hash || "#list";
+
+  if (hash === "#list"){
+    headerTitle.textContent = "Mes quiz";
+    modeTag.textContent = "Liste";
+    listView.style.display = "block";
+    wizardView.style.display = "none";
+    renderList();
+    return;
+  }
+
+  if (hash === "#new"){
+    headerTitle.textContent = "Assistant de création";
+    modeTag.textContent = "Création";
+    listView.style.display = "none";
+    wizardView.style.display = "block";
+
+    // 👉 Toujours repartir d'une page vierge (pas de brouillon réinjecté)
+    localStorage.removeItem("quizWizardDraft");
+    resetWizard();
+
+    // Alimente le sélecteur de classes
+    const all = loadClasses();
+    classPicker.innerHTML = all.map(c => `<option value="${sanitize(c)}">${sanitize(c)}</option>`).join("");
+
+    // Réglages visuels init
+    $$(".qtype").forEach(el => el.classList.toggle("active", el.dataset.type === "text"));
+    compQ.value = "";
+    setStep(1);
+    return;
+  }
+
+  if (hash.startsWith("#edit/")){
+    headerTitle.textContent = "Assistant d’édition";
+    modeTag.textContent = "Édition";
+    listView.style.display = "none";
+    wizardView.style.display = "block";
+
+    const idxStr = hash.split("/")[1];
+    const idx = Number.isFinite(Number(idxStr)) ? Number(idxStr) : -1;
+    const all = loadQuizzes();
+    const q = all[idx];
+
+    if (!q){
+      toast("Quiz introuvable");
+      goList();
+      return;
+    }
+
+    loadIntoWizard(q, idx);
+
+    const allc = loadClasses();
+    classPicker.innerHTML = allc.map(c => `<option value="${sanitize(c)}">${sanitize(c)}</option>`).join("");
+
+    // Assure que le type actif reflète le compositeur
+    $$(".qtype").forEach(el => el.classList.toggle("active", el.dataset.type === (wiz.comp.type || "text")));
+    setStep(1);
+    return;
+  }
+
+  // Route inconnue -> liste
+  goList();
+}
+
+
+    syncRoute();
+
+    /* ===== Raccourcis ===== */
+    document.addEventListener("keydown", (e)=>{
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="n"){ e.preventDefault(); goNew(); }
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="s"){
+        e.preventDefault();
+        if(location.hash==="#new" || location.hash.startsWith("#edit/")) saveQuiz.click();
+      }
+    });
+  </script>
+</body>
+</html>

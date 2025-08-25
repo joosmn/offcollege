@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Administration avancée</title>
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/3064/3064197.png">
+  <style>
+    body{margin:0;font-family:'Segoe UI',sans-serif;background:linear-gradient(145deg,#f8edff,#d4f0ff);min-height:100vh;display:flex;align-items:center;justify-content:center}
+    .wrap{width:100%;max-width:900px;background:#fff;border-radius:28px;box-shadow:0 20px 50px rgba(0,0,0,.15);padding:36px}
+    h1{margin:0 0 6px;text-align:center;color:#333}
+    .muted{text-align:center;color:#777;margin-bottom:24px}
+
+    .pin-box{max-width:420px;margin:12px auto 24px;background:#faf7ff;border:2px dashed #c7a8ff;padding:18px;border-radius:16px}
+    .pin-row{display:flex;gap:10px}
+    .pin-row input{flex:1;padding:12px 14px;border:2px solid #8c72ff;border-radius:12px;font-size:16px}
+    .pin-row button{padding:12px 18px;border:none;background:#8c72ff;color:#fff;border-radius:12px;font-weight:700;cursor:pointer}
+    .pin-help{font-size:13px;color:#666;margin-top:8px}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:18px}
+    .card{background:linear-gradient(145deg,#ffe4f0,#e0f7fa);border-radius:18px;padding:22px;text-align:center;cursor:pointer;box-shadow:0 10px 25px rgba(0,0,0,.1)}
+    .card:hover{transform:scale(1.03)}
+    .card img{width:52px;height:52px;display:block;margin:0 auto 10px}
+    .card p{margin:0;color:#333;font-weight:700}
+    .tools{display:none}
+    .back{display:block;text-align:center;margin-top:18px;color:#666;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🔐 Administration avancée</h1>
+    <div class="muted">Accès réservé — saisissez le code PIN pour déverrouiller les outils.</div>
+
+    <div class="pin-box" id="pinBox">
+      <div class="pin-row">
+        <input id="pinInput" type="password" placeholder="Code PIN" inputmode="numeric" maxlength="10">
+        <button onclick="unlock()">Déverrouiller</button>
+      </div>
+  
+    </div>
+
+    <div class="tools" id="tools">
+      <div class="grid">
+        <div class="card" onclick="go('gestion_points.html')">
+          <img src="https://cdn-icons-png.flaticon.com/512/3502/3502458.png" alt="">
+          <p>Gestion points</p>
+        </div>
+        <div class="card" onclick="exportData()">
+          <img src="https://cdn-icons-png.flaticon.com/512/724/724933.png" alt="">
+          <p>Exporter les données</p>
+        </div>
+        <div class="card" onclick="importData()">
+          <img src="https://cdn-icons-png.flaticon.com/512/724/724957.png" alt="">
+          <p>Importer des données</p>
+        </div>
+        <div class="card" onclick="resetConfirm()">
+          <img src="https://cdn-icons-png.flaticon.com/512/3917/3917215.png" alt="">
+          <p>Réinitialiser (danger)</p>
+        </div>
+      </div>
+    </div>
+
+    <a class="back" href="admin.html">⬅️ Retour au tableau de bord</a>
+  </div>
+
+  <script>
+    const CORRECT_PIN = "2580"; // PIN en dur
+
+    const pinBox = document.getElementById('pinBox');
+    const tools = document.getElementById('tools');
+
+    function unlock() {
+      const pin = document.getElementById('pinInput').value.trim();
+      if (pin && pin === CORRECT_PIN) {
+        pinBox.style.display = 'none';
+        tools.style.display = 'block';
+      } else {
+        alert('PIN incorrect.');
+      }
+    }
+
+    function go(url){ 
+      const pin = prompt("Veuillez confirmer le PIN pour accéder à cette page :");
+      if(pin === CORRECT_PIN){
+        window.location.href = url;
+      } else {
+        alert("PIN incorrect.");
+      }
+    }
+
+    function exportData() {
+      const dump = {
+        students: JSON.parse(localStorage.getItem('students')||'[]'),
+        studentsByClass: JSON.parse(localStorage.getItem('studentsByClass')||'{}'),
+        quizzes: JSON.parse(localStorage.getItem('quizzes')||'[]'),
+        historiqueParties: JSON.parse(localStorage.getItem('historiqueParties')||'[]'),
+        records: JSON.parse(localStorage.getItem('records')||'{}'),
+        classes: JSON.parse(localStorage.getItem('classes')||'[]')
+      };
+      const blob = new Blob([JSON.stringify(dump,null,2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `backup_quiz_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.json`;
+      a.click();
+    }
+
+    function importData() {
+      const pin = prompt("Veuillez confirmer le PIN avant d'importer :");
+      if(pin !== CORRECT_PIN){ alert("PIN incorrect."); return; }
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/json';
+      input.onchange = () => {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try{
+            const data = JSON.parse(reader.result);
+            if (data.students) localStorage.setItem('students', JSON.stringify(data.students));
+            if (data.studentsByClass) localStorage.setItem('studentsByClass', JSON.stringify(data.studentsByClass));
+            if (data.quizzes) localStorage.setItem('quizzes', JSON.stringify(data.quizzes));
+            if (data.historiqueParties) localStorage.setItem('historiqueParties', JSON.stringify(data.historiqueParties));
+            if (data.records) localStorage.setItem('records', JSON.stringify(data.records));
+            if (data.classes) localStorage.setItem('classes', JSON.stringify(data.classes));
+            alert('Import terminé ✅');
+          }catch(e){
+            alert('Fichier invalide.');
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+
+    function resetConfirm() {
+      const pin = prompt("Veuillez confirmer le PIN avant de réinitialiser :");
+      if(pin !== CORRECT_PIN){ alert("PIN incorrect."); return; }
+
+      if (!confirm('⚠️ Vider toutes les données (élèves, quizzes, historiques, records) ?')) return;
+      ['students','studentsByClass','quizzes','historiqueParties','records'].forEach(k=>localStorage.removeItem(k));
+      alert('Réinitialisation effectuée.');
+    }
+  </script>
+</body>
+</html>
