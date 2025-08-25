@@ -109,50 +109,73 @@
   <div id="toast" class="toast"></div>
 
   <script>
-    // ===== session guard =====
+    // ===== session guard (compat poste verrouillé) =====
     (function(){
-  const KEY   = 'adminSession';
-  const STEP  = 15000;             // vérif toutes les 15s
-  const IDLE  = 60 * 60 * 1000;    // 1h
+      const KEY='adminSession', STEP=15000, IDLE=60*60*1000;
+      function getSess(){
+        try{
+          let raw = sessionStorage.getItem(KEY) || localStorage.getItem(KEY);
+          if(!raw && window.name && window.name.startsWith('QUIZSESS:')) raw = window.name.slice(9);
+          if(!raw) return null;
+          const s = JSON.parse(raw); if(!s || !s.user) return null; return s;
+        }catch{ return null; }
+      }
+      function saveSess(s){
+        try{ sessionStorage.setItem(KEY, JSON.stringify(s)); return; }catch{}
+        try{ localStorage.setItem(KEY, JSON.stringify(s)); return; }catch{}
+        try{ window.name='QUIZSESS:'+JSON.stringify(s); }catch{}
+      }
+      function redirectLogin(){ try{ sessionStorage.removeItem(KEY); }catch{} window.location.replace('index.html'); }
+      function bump(){ const s=getSess(); if(!s){ redirectLogin(); return; } s.until=Date.now()+IDLE; saveSess(s); }
+      function check(){ const s=getSess(); if(!s || !s.until || s.until<=Date.now()) redirectLogin(); }
+      ['click','keydown','mousemove','touchstart','focus'].forEach(ev=>window.addEventListener(ev,bump,{passive:true}));
+      document.addEventListener('visibilitychange',()=>{ if(!document.hidden) bump(); },{passive:true});
+      bump(); setInterval(check, STEP);
+    })();
 
-  function getSess(){
-    try{
-      const raw = sessionStorage.getItem(KEY) || localStorage.getItem(KEY); // compat ancien code
-      if(!raw) return null;
-      const s = JSON.parse(raw);
-      if(!s || !s.user) return null;
-      return s;
-    }catch(e){ return null; }
-  }
-  function saveSess(s){
-    try{ sessionStorage.setItem(KEY, JSON.stringify(s)); }catch(e){}
-  }
-  function redirectLogin(){
-    try { sessionStorage.removeItem(KEY); } catch(e){}
-    window.location.replace('index.html');
-  }
-  function bump(){                        // prolonge la session de 1h
-    const s = getSess();
-    if(!s) { redirectLogin(); return; }
-    s.until = Date.now() + IDLE;
-    saveSess(s);
-  }
-  function check(){                       // coupe si inactif > 1h
-    const s = getSess();
-    if(!s || !s.until || s.until <= Date.now()){
-      redirectLogin();
+    // ===== petite couche d'accès au stockage (utilise storage-unified si présent) =====
+    const Store = {
+      read(k, fb='null'){
+        if (window.CACHE && Object.prototype.hasOwnProperty.call(CACHE,k)) return CACHE[k];
+        try{ const raw = localStorage.getItem(k); return raw!=null ? JSON.parse(raw) : JSON.parse(fb); }catch{ return JSON.parse(fb); }
+      },
+      async write(k, v){
+        if (typeof window.write === 'function'){ await window.write(k, v); }
+        else { try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+        try{ localStorage.setItem('__ping', String(Date.now())); }catch{}
+      },
+      async remove(k){
+        if (window.DB?.remove) await window.DB.remove(k);
+        try{ localStorage.removeItem(k); }catch{}
+      }
+    };
+
+    // ===== IDs & migrations =====
+    function newId(){
+      if (crypto?.randomUUID) return crypto.randomUUID();
+      const a=new Uint8Array(8); try{ crypto.getRandomValues(a); }catch(e){ for(let i=0;i<a.length;i++) a[i]=Math.random()*256|0; }
+      return 's_'+Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');
     }
-  }
-
-  // Prolonge à la moindre activité utile
-  const EVENTS = ['click','keydown','mousemove','touchstart','focus'];
-  EVENTS.forEach(ev => window.addEventListener(ev, bump, {passive:true}));
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) bump(); }, {passive:true});
-
-  // Démarrage : prolonge immédiatement puis vérifie périodiquement
-  bump();
-  setInterval(check, STEP);
-})();
+    function ensureStudentIds(list){
+      let changed=false;
+      (list||[]).forEach(st=>{ if(!st.id){ st.id=newId(); changed=true; } });
+      if (changed) Store.write('students', list);
+      return list;
+    }
+    async function migrateLegacy(){
+      const legacy = Store.read('studentsByClass','null');
+      let students = Store.read('students','[]') || [];
+      if (legacy && typeof legacy==='object'){
+        const merged=[];
+        Object.entries(legacy).forEach(([cls, arr])=>{
+          (arr||[]).forEach(n => merged.push({ id:newId(), name:String(n).trim(), classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString() }));
+        });
+        students = (students||[]).concat(merged);
+        await Store.write('students', students);
+        await Store.remove('studentsByClass');
+      }
+      ensureStudentIds(students);
+    }
 
     // ===== data layer =====
     const LS_CLASSES = 'classes';
@@ -162,33 +185,20 @@
     function initials(str){ return (str||'').split(/\s+/).map(s=>s[0]||'').join('').slice(0,2).toUpperCase(); }
 
     function loadStudents(){
-      // Migration depuis studentsByClass si présent
-      const legacy = JSON.parse(localStorage.getItem('studentsByClass') || 'null');
-      if(legacy && typeof legacy==='object'){
-        const merged = [];
-        Object.entries(legacy).forEach(([cls, names])=>{
-          (names||[]).forEach(n=>{
-            merged.push({name:n, classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString()});
-          });
-        });
-        const exist = JSON.parse(localStorage.getItem(LS_STUDENTS) || '[]');
-        const all = [...exist, ...merged];
-        localStorage.setItem(LS_STUDENTS, JSON.stringify(all));
-        localStorage.removeItem('studentsByClass');
-      }
-      return JSON.parse(localStorage.getItem(LS_STUDENTS) || '[]');
+      const arr = ensureStudentIds(Store.read(LS_STUDENTS,'[]') || []);
+      return arr;
     }
-    function saveStudents(arr){ localStorage.setItem(LS_STUDENTS, JSON.stringify(arr||[])); }
+    async function saveStudents(arr){ await Store.write(LS_STUDENTS, arr||[]); }
 
     function loadClasses(){
-      let cls = JSON.parse(localStorage.getItem(LS_CLASSES) || 'null');
-      if(!Array.isArray(cls)) cls = [];
+      let cls = Store.read(LS_CLASSES,'[]'); if(!Array.isArray(cls)) cls = [];
       const fromStudents = uniq(loadStudents().map(s=>s.classe).filter(Boolean));
       cls = uniq([...cls, ...fromStudents]);
-      localStorage.setItem(LS_CLASSES, JSON.stringify(cls));
+      // on ne force pas d'écriture si inchangé
+      Store.write(LS_CLASSES, cls);
       return cls;
     }
-    function saveClasses(arr){ localStorage.setItem(LS_CLASSES, JSON.stringify(arr||[])); }
+    async function saveClasses(arr){ await Store.write(LS_CLASSES, arr||[]); }
 
     // ===== UI refs =====
     const $  = s => document.querySelector(s);
@@ -203,210 +213,215 @@
 
     function toast(msg){ toastEl.textContent = msg; toastEl.style.display='block'; setTimeout(()=> toastEl.style.display='none', 1500); }
 
-    let STUDENTS = loadStudents();
-    let CLASSES = loadClasses();
-    let currentClass = new URLSearchParams(location.search).get('classe') || (CLASSES[0] || 'Inconnue');
+    // Boot
+    (async ()=>{
+      await migrateLegacy();
 
-    if(!CLASSES.includes(currentClass)) CLASSES.push(currentClass);
-    saveClasses(CLASSES);
+      let CLASSES = loadClasses();
+      let currentClass = new URLSearchParams(location.search).get('classe') || (CLASSES[0] || 'Inconnue');
+      if(!CLASSES.includes(currentClass)){ CLASSES.push(currentClass); await saveClasses(CLASSES); }
 
-    // Fill class selector
-    function fillClassSelector(){
-      CLASSES = loadClasses();
-      classSelect.innerHTML = CLASSES.map(c=>`<option value="${c}">${c}</option>`).join('');
-      classSelect.value = currentClass;
-    }
-    fillClassSelector();
+      function fillClassSelector(){
+        CLASSES = loadClasses();
+        classSelect.innerHTML = CLASSES.map(c=>`<option value="${c}">${c}</option>`).join('');
+        classSelect.value = currentClass;
+      }
+      function setSubtitle(){ subtitle.textContent = `Gestion des élèves — Classe ${currentClass}`; }
 
-    function setSubtitle(){
-      subtitle.textContent = `Gestion des élèves — Classe ${currentClass}`;
-    }
-    setSubtitle();
+      fillClassSelector(); setSubtitle();
 
-    // Render list
-    function render(){
-      STUDENTS = loadStudents();
-      const term = (search.value||'').toLowerCase().trim();
-      const rows = STUDENTS.filter(s=>s.classe===currentClass && s.name.toLowerCase().includes(term))
-                           .sort((a,b)=> a.name.localeCompare(b.name));
+      function render(){
+        const STUDENTS = loadStudents();
+        const term = (search.value||'').toLowerCase().trim();
+        const rows = STUDENTS
+          .filter(s=>s.classe===currentClass && s.name.toLowerCase().includes(term))
+          .sort((a,b)=> a.name.localeCompare(b.name) || (a.createdAt||'').localeCompare(b.createdAt||''));
 
-      list.innerHTML = '';
-      rows.forEach((s,idx)=>{
-        const row = document.createElement('div');
-        row.className = 'row';
-        row.innerHTML = `
-          <div class="avatar" aria-hidden="true">${initials(s.name)}</div>
-          <div>
-            <div class="name">${s.name}</div>
-            <div class="muted">Créé le ${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'} · Points ${s.points||0}</div>
-          </div>
-          <div class="actions">
-            <button class="icon-btn" title="Renommer" data-act="edit" data-name="${encodeURIComponent(s.name)}">✏️</button>
-            <button class="icon-btn" title="Reclasser" data-act="move" data-name="${encodeURIComponent(s.name)}">🧭</button>
-            <button class="icon-btn danger" title="Supprimer" data-act="del" data-name="${encodeURIComponent(s.name)}">🗑️</button>
-          </div>
-        `;
-        list.appendChild(row);
+        list.innerHTML = '';
+        rows.forEach((s)=>{
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.dataset.id = s.id;
+          row.innerHTML = `
+            <div class="avatar" aria-hidden="true">${initials(s.name)}</div>
+            <div>
+              <div class="name">${escapeHtml(s.name)}</div>
+              <div class="muted">Créé le ${s.createdAt ? new Date(s.createdAt).toLocaleDateString() : '—'} · Points ${s.points||0}</div>
+            </div>
+            <div class="actions">
+              <button class="icon-btn" title="Renommer" data-act="edit" data-id="${s.id}">✏️</button>
+              <button class="icon-btn" title="Reclasser" data-act="move" data-id="${s.id}">🧭</button>
+              <button class="icon-btn danger" title="Supprimer" data-act="del" data-id="${s.id}">🗑️</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+
+        empty.style.display = rows.length ? 'none' : 'block';
+        stats.textContent = `👥 ${rows.length} élève(s)`;
+      }
+
+      function escapeHtml(t){ return String(t).replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+      // Class change
+      classSelect.addEventListener('change', async e=>{
+        currentClass = e.target.value;
+        setSubtitle(); render();
+        history.replaceState(null,'',`eleves.html?classe=${encodeURIComponent(currentClass)}`);
       });
 
-      empty.style.display = rows.length ? 'none' : 'block';
-      stats.textContent = `👥 ${rows.length} élève(s)`;
-    }
-    render();
+      search.addEventListener('input', render);
 
-    // Class change
-    classSelect.addEventListener('change', e=>{
-      currentClass = e.target.value;
-      setSubtitle();
-      render();
-      history.replaceState(null,'',`eleves.html?classe=${encodeURIComponent(currentClass)}`);
-    });
-
-    search.addEventListener('input', render);
-
-    // Add single
-    function addOne(name){
-      const n = (name||'').trim();
-      if(!n) return;
-      // dedup within class
-      const exists = loadStudents().some(s=> s.classe===currentClass && s.name.toLowerCase()===n.toLowerCase());
-      if(exists){ toast('Déjà présent dans cette classe'); return; }
-      const rec = { name:n, classe:currentClass, points:0, subjects:{}, createdAt:new Date().toISOString() };
-      saveStudents([...loadStudents(), rec]);
-      toast('Élève ajouté'); render();
-    }
-    addBtn.addEventListener('click', ()=>{ addOne(newStudent.value); newStudent.value=''; newStudent.focus(); });
-    newStudent.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addBtn.click(); } });
-
-    // Row actions
-    list.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button[data-act]');
-      if(!btn) return;
-      const name = decodeURIComponent(btn.getAttribute('data-name'));
-      if(btn.dataset.act==='edit') openRenameModal(name);
-      if(btn.dataset.act==='move') openMoveModal(name);
-      if(btn.dataset.act==='del')  delStudent(name);
-    });
-
-    function delStudent(name){
-      if(!confirm(`Supprimer “${name}” de ${currentClass} ?`)) return;
-      const st = loadStudents().filter(s => !(s.classe===currentClass && s.name===name));
-      saveStudents(st); toast('Supprimé'); render();
-    }
-
-    function openRenameModal(oldName){
-      openModal('Renommer l’élève', `
-        <label>Nouveau nom</label>
-        <input id="nvName" class="input" value="${oldName}" />
-        <div class="notice">Les points et l’historique restent inchangés.</div>
-      `, ()=>{
-        const v = ($('#nvName').value||'').trim();
-        if(!v){ toast('Nom invalide'); return; }
-        if(v.toLowerCase()===oldName.toLowerCase()){ closeModal(); return; }
-        // de-dup
-        if(loadStudents().some(s=> s.classe===currentClass && s.name.toLowerCase()===v.toLowerCase())){
-          toast('Un élève porte déjà ce nom dans la classe'); return;
-        }
-        const st = loadStudents().map(s => (s.classe===currentClass && s.name===oldName) ? {...s, name:v} : s);
-        saveStudents(st); toast('Modifié'); closeModal(); render();
-      }, null, 'Renommer');
-    }
-
-    function openMoveModal(name){
-      const cls = loadClasses();
-      openModal('Reclasser l’élève', `
-        <div>Déplacer <b>${name}</b> vers :</div>
-        <select id="dest" class="input">${cls.map(c=>`<option value="${c}" ${c===currentClass?'selected':''}>${c}</option>`).join('')}</select>
-      `, ()=>{
-        const dest = $('#dest').value;
-        if(!dest){ toast('Choisis une destination'); return; }
-        if(dest===currentClass){ closeModal(); return; }
-        const st = loadStudents().map(s => (s.classe===currentClass && s.name===name) ? {...s, classe:dest} : s);
-        saveStudents(st); toast('Déplacé'); closeModal();
-        if(dest!==currentClass){ currentClass = dest; classSelect.value = currentClass; setSubtitle(); render(); history.replaceState(null,'',`eleves.html?classe=${encodeURIComponent(currentClass)}`); }
-      }, null, 'Déplacer');
-    }
-
-    // Bulk add modal
-    bulkBtn.addEventListener('click', ()=>{
-      openModal('Ajout en lot', `
-        <label>Noms (un par ligne)</label>
-        <textarea id="bulkArea" class="input" placeholder="Alice Martin&#10;Bob Dupont&#10;..."></textarea>
-        <div class="notice">Les doublons (dans la classe) seront ignorés.</div>
-      `, ()=>{
-        const lines = ($('#bulkArea').value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        if(!lines.length){ toast('Aucun nom'); return; }
-        const exist = loadStudents().filter(s=>s.classe===currentClass).map(s=>s.name.toLowerCase());
-        const toAdd = lines.filter(n => !exist.includes(n.toLowerCase()));
-        if(!toAdd.length){ toast('Tous étaient déjà présents'); closeModal(); return; }
+      // Add single (autorise homonymes)
+      async function addOne(name){
+        const n = (name||'').trim();
+        if(!n) return;
         const now = new Date().toISOString();
-        const recs = toAdd.map(n => ({name:n, classe:currentClass, points:0, subjects:{}, createdAt:now}));
-        saveStudents([...loadStudents(), ...recs]);
-        toast(`${recs.length} élève(s) ajouté(s)`); closeModal(); render();
-      }, null, 'Ajouter');
-    });
+        const listAll = loadStudents();
+        listAll.push({ id:newId(), name:n, classe:currentClass, points:0, subjects:{}, createdAt:now });
+        await saveStudents(listAll);
+        toast('Élève ajouté'); render();
+      }
+      addBtn.addEventListener('click', ()=>{ addOne(newStudent.value); newStudent.value=''; newStudent.focus(); });
+      newStudent.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); addBtn.click(); } });
 
-    // Export CSV
-    exportBtn.addEventListener('click', ()=>{
-      const rows = loadStudents().filter(s=>s.classe===currentClass).sort((a,b)=>a.name.localeCompare(b.name));
-      const header = ['name','classe','createdAt','points'];
-      const csv = [header.join(',')].concat(rows.map(s => [s.name, s.classe, s.createdAt||'', s.points||0].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))).join('\n');
-      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `eleves_${currentClass}.csv`; a.click();
-      URL.revokeObjectURL(url);
-    });
+      // Row actions
+      list.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('button[data-act]');
+        if(!btn) return;
+        const id = btn.getAttribute('data-id');
+        const student = loadStudents().find(s=>s.id===id);
+        if(!student) return;
 
-    // Import CSV (optionnel)
-    importBtn.addEventListener('click', ()=>{
-      openModal('Import CSV', `
-        <div class="notice">Format attendu : colonnes <b>name</b> et optionnellement <b>classe</b>. Les lignes vides sont ignorées.</div>
-        <input id="fileCsv" class="input" type="file" accept=".csv,text/csv" />
-      `, async ()=>{
-        const file = $('#fileCsv').files?.[0];
-        if(!file){ toast('Choisis un fichier'); return; }
-        const txt = await file.text();
-        const lines = txt.split(/\r?\n/).filter(Boolean);
-        if(!lines.length){ toast('Fichier vide'); return; }
-        const header = lines.shift().split(',').map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
-        const idxName = header.indexOf('name');
-        const idxClasse = header.indexOf('classe');
-        if(idxName<0){ toast('Colonne "name" manquante'); return; }
-        const exist = loadStudents();
-        let added = 0;
-        lines.forEach(l=>{
-          const cols = l.match(/("([^"]|"")*"|[^,]+)/g) || [];
-          const name = (cols[idxName]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim();
-          if(!name) return;
-          const cls = idxClasse>=0 ? (cols[idxClasse]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim() || currentClass : currentClass;
-          // de-dup within that class
-          if(exist.some(s=> s.classe===cls && s.name.toLowerCase()===name.toLowerCase())) return;
-          exist.push({name, classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString()});
-          if(!CLASSES.includes(cls)){ CLASSES.push(cls); }
-          added++;
-        });
-        saveStudents(exist); saveClasses(CLASSES);
-        toast(`${added} élève(s) importé(s)`); closeModal(); fillClassSelector(); render();
-      }, null, 'Importer');
-    });
+        if(btn.dataset.act==='edit') openRenameModal(student);
+        if(btn.dataset.act==='move') openMoveModal(student);
+        if(btn.dataset.act==='del')  delStudent(student);
+      });
 
-    // Modal helpers
-    let modalAction = null;
-    function openModal(title, bodyHtml, action, data, confirmLabel='Valider'){
-      modalTitle.textContent = title;
-      modalBody.innerHTML = bodyHtml;
-      modalAction = action;
-      confirmBtn.textContent = confirmLabel;
-      overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false');
-      setTimeout(()=> modalBody.querySelector('input,textarea,select')?.focus(), 0);
-    }
-    function closeModal(){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); modalAction=null; }
-    cancelBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
-    confirmBtn.addEventListener('click', ()=>{ if(typeof modalAction==='function') modalAction(); });
+      async function delStudent(st){
+        if(!confirm(`Supprimer “${st.name}” de ${st.classe} ?`)) return;
+        const all = loadStudents().filter(s => s.id !== st.id);
+        await saveStudents(all);
+        toast('Supprimé'); render();
+      }
+
+      function openRenameModal(st){
+        openModal('Renommer l’élève', `
+          <label>Nouveau nom</label>
+          <input id="nvName" class="input" value="${escapeHtml(st.name)}" />
+          <div class="notice">Les points et l’historique restent inchangés.</div>
+        `, async ()=>{
+          const v = ($('#nvName').value||'').trim();
+          if(!v){ toast('Nom invalide'); return; }
+          if(v===st.name){ closeModal(); return; }
+          const all = loadStudents().map(s => s.id===st.id ? {...s, name:v} : s);
+          await saveStudents(all);
+          toast('Modifié'); closeModal(); render();
+        }, null, 'Renommer');
+      }
+
+      function openMoveModal(st){
+        const cls = loadClasses();
+        openModal('Reclasser l’élève', `
+          <div>Déplacer <b>${escapeHtml(st.name)}</b> vers :</div>
+          <select id="dest" class="input">${cls.map(c=>`<option value="${c}" ${c===st.classe?'selected':''}>${c}</option>`).join('')}</select>
+        `, async ()=>{
+          const dest = $('#dest').value;
+          if(!dest){ toast('Choisis une destination'); return; }
+          if(dest===st.classe){ closeModal(); return; }
+          const all = loadStudents().map(s => s.id===st.id ? {...s, classe:dest} : s);
+          await saveStudents(all);
+          toast('Déplacé'); closeModal();
+          if(dest!==currentClass){ currentClass = dest; classSelect.value = currentClass; setSubtitle(); render(); history.replaceState(null,'',`eleves.html?classe=${encodeURIComponent(currentClass)}`); }
+          render();
+        }, null, 'Déplacer');
+      }
+
+      // Bulk add (autorise homonymes)
+      bulkBtn.addEventListener('click', ()=>{
+        openModal('Ajout en lot', `
+          <label>Noms (un par ligne)</label>
+          <textarea id="bulkArea" class="input" placeholder="Alice Martin&#10;Alex Martin&#10;..."></textarea>
+          <div class="notice">Les homonymes sont maintenant autorisés 👍</div>
+        `, async ()=>{
+          const lines = ($('#bulkArea').value||'').split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+          if(!lines.length){ toast('Aucun nom'); return; }
+          const now = new Date().toISOString();
+          const recs = lines.map(n => ({ id:newId(), name:n, classe:currentClass, points:0, subjects:{}, createdAt:now }));
+          const all = loadStudents().concat(recs);
+          await saveStudents(all);
+          toast(`${recs.length} élève(s) ajouté(s)`); closeModal(); render();
+        }, null, 'Ajouter');
+      });
+
+      // Export CSV (inclut id pour conserver l’unicité)
+      exportBtn.addEventListener('click', ()=>{
+        const rows = loadStudents().filter(s=>s.classe===currentClass).sort((a,b)=>a.name.localeCompare(b.name));
+        const header = ['id','name','classe','createdAt','points'];
+        const csv = [header.join(',')].concat(
+          rows.map(s => [s.id, s.name, s.classe, s.createdAt||'', s.points||0]
+            .map(v=>`"${String(v).replace(/"/g,'""')}"`).join(','))
+        ).join('\n');
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `eleves_${currentClass}.csv`; a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // Import CSV (accepte optionnellement une colonne id)
+      importBtn.addEventListener('click', ()=>{
+        openModal('Import CSV', `
+          <div class="notice">Format attendu : <b>name</b> et optionnellement <b>classe</b>, <b>id</b>. Les homonymes sont autorisés.</div>
+          <input id="fileCsv" class="input" type="file" accept=".csv,text/csv" />
+        `, async ()=>{
+          const file = $('#fileCsv').files?.[0];
+          if(!file){ toast('Choisis un fichier'); return; }
+          const txt = await file.text();
+          const lines = txt.split(/\r?\n/).filter(l=>l.trim().length);
+          if(!lines.length){ toast('Fichier vide'); return; }
+          const header = lines.shift().match(/("([^"]|"")*"|[^,]+)/g).map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
+          const idxId = header.indexOf('id');
+          const idxName = header.indexOf('name');
+          const idxClasse = header.indexOf('classe');
+          if(idxName<0){ toast('Colonne "name" manquante'); return; }
+          const exist = loadStudents();
+          let added = 0;
+          lines.forEach(l=>{
+            const cols = l.match(/("([^"]|"")*"|[^,]+)/g) || [];
+            const name = (cols[idxName]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim();
+            if(!name) return;
+            const cls  = idxClasse>=0 ? (cols[idxClasse]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim() || currentClass : currentClass;
+            const id   = idxId>=0 ? (cols[idxId]||'').replace(/^"|"$/g,'').replace(/""/g,'"').trim() || newId() : newId();
+            exist.push({ id, name, classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString() });
+            added++;
+          });
+          await saveStudents(exist); await saveClasses(loadClasses());
+          toast(`${added} élève(s) importé(s)`); closeModal(); fillClassSelector(); render();
+        }, null, 'Importer');
+      });
+
+      // Modal helpers
+      let modalAction = null;
+      function openModal(title, bodyHtml, action, data, confirmLabel='Valider'){
+        modalTitle.textContent = title;
+        modalBody.innerHTML = bodyHtml;
+        modalAction = action;
+        confirmBtn.textContent = confirmLabel;
+        overlay.style.display = 'flex'; overlay.setAttribute('aria-hidden','false');
+        setTimeout(()=> modalBody.querySelector('input,textarea,select')?.focus(), 0);
+      }
+      function closeModal(){ overlay.style.display='none'; overlay.setAttribute('aria-hidden','true'); modalAction=null; }
+      cancelBtn.addEventListener('click', closeModal);
+      overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+      confirmBtn.addEventListener('click', ()=>{ if(typeof modalAction==='function') modalAction(); });
+
+      // Première peinture
+      render();
+    })();
   </script>
-  <script src="storage-core.js"></script>
 
+  <!-- Si tu utilises mon adaptateur global, garde-le (il sera pris en compte automatiquement) -->
+  <script src="storage-core.js"></script>
 </body>
 </html>
