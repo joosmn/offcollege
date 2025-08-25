@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Jeu en Direct</title>
-  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
       --bg: #f7f8fb;
@@ -78,6 +78,12 @@
     .quiz-question{ font-size:20px; font-weight:800; color:#262b3c; line-height:1.35; margin:0 0 14px; }
     .quiz-media{ margin:10px 0 14px; border-radius:12px; overflow:hidden; border:1px solid #eee; box-shadow:0 6px 16px rgba(0,0,0,.06); }
     .quiz-media img{ display:block; width:100%; height:auto; }
+
+    .quiz-options{ display:flex; flex-wrap:wrap; gap:8px; }
+    .opt{
+      border:0; border-radius:10px; padding:8px 12px; font-weight:800; cursor:pointer; color:#1e2a5c;
+      background:#eef2ff; border:1px solid #dee3ff;
+    }
 
     .quiz-answer{
       margin-top:12px; border-radius:14px; border:1px dashed #d9d5ff;
@@ -353,6 +359,19 @@
   </div>
 
   <script>
+    /* ===== Polyfill CSS.escape pour vieux navigateurs ===== */
+    (function(){
+      if (window.CSS && CSS.escape) return;
+      const r = /([^\x20-\x7E]|^-?\d|^-$|^-|[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g;
+      window.CSS = window.CSS || {};
+      window.CSS.escape = function(value){
+        return String(value).replace(r, function(ch){
+          const code = ch.charCodeAt(0).toString(16).toUpperCase();
+          return "\\\\" + code + " ";
+        });
+      };
+    })();
+
     /* ========= Contexte ========= */
     const params     = new URLSearchParams(window.location.search);
     const subject    = params.get("subject");
@@ -404,9 +423,9 @@
 
     // Équipe vs Équipe
     let superOf = {};                // teamKey => 'A' | 'B'
-    let teamOf  = {};                // playerName => 'A' | 'B'   👈 nouveau (pour résultats)
+    let teamOf  = {};                // playerName => 'A' | 'B'
     let superScoreA = 0, superScoreB = 0;
-    let totalPlayersA = 0, totalPlayersB = 0; // pour la répartition finale
+    let totalPlayersA = 0, totalPlayersB = 0;
 
     // Duel
     let currentDuel = null;          // [teamKey1, teamKey2]
@@ -494,7 +513,7 @@
       if (MODE.teamvs){
         const side = (idx % 2 === 0) ? 'A' : 'B';
         superOf[teamKey] = side;
-        members.forEach(n => { teamOf[n] = side; });        // 👈 on mémorise le côté de chaque joueur
+        members.forEach(n => { teamOf[n] = side; });
         if (side === 'A'){ totalPlayersA += members.length; teamClass = 'teamA'; }
         else { totalPlayersB += members.length; teamClass = 'teamB'; }
       }
@@ -615,12 +634,12 @@
       let b = document.getElementById(bChipId);
       if (!a){
         a = document.createElement('span');
-        a.id=aChipId; a.className='mode-chip'; a.style.background='rgba(16,185,129,.1)'; a.style.border='1px solid rgba(16,185,129,.25)'; a.style.color='#065f46';
+        a.id=aChipId; a.className='mode-chip';
         modeChips.appendChild(a);
       }
       if (!b){
         b = document.createElement('span');
-        b.id=bChipId; b.className='mode-chip'; b.style.background='rgba(59,130,246,.08)'; b.style.border='1px solid rgba(59,130,246,.25)'; b.style.color='#1e3a8a';
+        b.id=bChipId; b.className='mode-chip';
         modeChips.appendChild(b);
       }
       a.textContent = `${MODE.teamA}: ${superScoreA}`;
@@ -669,11 +688,7 @@
     function updateScoreView(teamKey){
       const scoreEl = document.getElementById("score-"+CSS.escape(teamKey));
       if (!scoreEl) return;
-      if (MODE.mystere){
-        scoreEl.textContent = "—";
-      } else {
-        scoreEl.textContent = `${scores[teamKey] || 0} pts`;
-      }
+      scoreEl.textContent = MODE.mystere ? "—" : `${scores[teamKey] || 0} pts`;
     }
 
     function highlightLeader(){
@@ -818,7 +833,7 @@
       ansEl.innerHTML = "";
       ansEl.classList.remove("visible");
 
-      const q = quizQuestions[currentQuestion];
+      const q = quizQuestions[currentQuestion] || {};
 
       if (q.type === "image-texte") {
         qEl.textContent = q.question || "";
@@ -852,8 +867,8 @@
           };
           optsEl.appendChild(b);
         });
-      } else {
-        ansEl.textContent = `Réponse : ${q.reponse || "—"}`;
+      } else if (q.reponse) {
+        ansEl.textContent = `Réponse : ${q.reponse}`;
       }
     }
 
@@ -890,18 +905,18 @@
         members: teamKey.split(' + '),
         score: scores[teamKey] || 0,
         classes: teamKey.split(' + ').map(n => getClasse(n)).join(' / '),
-        side: MODE.teamvs ? (superOf[teamKey] || null) : null  // 👈 side explicite
+        side: MODE.teamvs ? (superOf[teamKey] || null) : null
       }));
       results.sort((a, b) => (b.score - a.score) || a.teamKey.localeCompare(b.teamKey));
 
       // Répartition Team vs Team
       let playerAwards = {};
-      let rawByPlayer = {}; // points "marqués" bruts (score d’une équipe réparti entre ses membres)
+      let rawByPlayer = {};
       if (MODE.teamvs){
-        // recalcul au cas où
+        // totaux
         recomputeSuperScores();
 
-        // rawByPlayer depuis la photographie finale des scores
+        // points bruts par joueur (score d’équipe partagé entre ses membres)
         Object.keys(scores).forEach(teamKey => {
           const members = teamKey.split(' + ');
           const share = (scores[teamKey] || 0) / Math.max(1, members.length);
@@ -925,29 +940,29 @@
 
       const payload = {
         nomPartie: localStorage.getItem("nomPartie") || "Partie",
-        subject: new URLSearchParams(location.search).get("subject") || "",
-        timestamp: Date.now(),
+        matiere: new URLSearchParams(location.search).get("subject") || "",
+        dateIso: new Date().toISOString(),
         results,
         teamMode: MODE.teamvs ? {
           teamA: MODE.teamA,
           teamB: MODE.teamB,
-          scoreA: superScoreA,        // 👈 totaux fiables
+          scoreA: superScoreA,
           scoreB: superScoreB,
           playersA: totalPlayersA,
           playersB: totalPlayersB,
-          teamOf,                     // 👈 joueur -> A/B
-          rawByPlayer                 // 👈 points bruts
+          teamOf,
+          rawByPlayer
         } : null,
-        playerAwards                  // { "Alice": 7.5, "Bob": 7.5, ... } si teamvs actif
+        playerAwards
       };
       localStorage.setItem("lastGameResults", JSON.stringify(payload));
 
-      // Historique léger
+      // Historique léger (pour classements)
       const hist = JSON.parse(localStorage.getItem("historiqueParties") || "[]");
       hist.push({
-        dateIso: new Date().toISOString(),
-        nom: nomPartie,
-        matiere: subject || "",
+        dateIso: payload.dateIso,
+        nom: payload.nomPartie,
+        matiere: payload.matiere || "",
         modeDuo: isDuo,
         scores: { ...scores }
       });
@@ -956,11 +971,14 @@
       window.location.href = "resultats.html";
     }
 
-    // Expose
+    // Expose global
     window.startChrono = startChrono;
     window.showAnswer = showAnswer;
     window.nextQuestion = nextQuestion;
     window.endGame = endGame;
+    window.inc = window.inc;
+    window.wrong = window.wrong;
+    window.armJoker = window.armJoker;
 
     if (MODE.teamvs) recomputeSuperScores();
   </script>
