@@ -85,7 +85,7 @@
       border:1px solid var(--ring2);
       border-radius:12px;
       box-shadow:var(--shadow-sm);
-      padding:12px 44px 12px 14px; /* place pour flèche */
+      padding:12px 44px 12px 14px;
       font-weight:800; color:var(--text);
       transition: box-shadow .15s ease, border-color .15s ease, transform .05s ease;
       cursor:pointer;
@@ -360,15 +360,44 @@
   </div>
 
   <script>
+    /* ========= Utils stockage / données ========= */
+    const Store = {
+      read(k, fb='null'){
+        if (window.CACHE && Object.prototype.hasOwnProperty.call(CACHE,k) && CACHE[k]!==undefined) return CACHE[k];
+        try{ const raw = localStorage.getItem(k); return raw!=null ? JSON.parse(raw) : JSON.parse(fb); }catch{ try{ return JSON.parse(fb);}catch{return null;} }
+      },
+      write(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+    };
+    function newId(){
+      if (crypto?.randomUUID) return crypto.randomUUID();
+      const a=new Uint8Array(8); try{ crypto.getRandomValues(a);}catch(e){ for(let i=0;i<a.length;i++) a[i]=Math.random()*256|0; }
+      return 's_'+Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    function ensureStudentIds(list){
+      let changed=false;
+      (list||[]).forEach(st=>{ if(!st.id){ st.id=newId(); changed=true; } });
+      if (changed) Store.write('students', list);
+      return list;
+    }
+
     /* ========= État ========= */
     const wiz = {
       name: "", subject: "Français", classes: [],
-      quizTitle: "", selected: new Set(),
-      duoMode: false, mixteMode: false,
-      duos: [], inDuo: new Set(),
+      quizTitle: "",
 
-      students: JSON.parse(localStorage.getItem("students")||"[]"),
-      quizzes:  JSON.parse(localStorage.getItem("quizzes") || "[]"),
+      // Sélection par ID (homonymes OK)
+      selected: new Set(),        // Set<id>
+      duoMode: false, mixteMode: false,
+      duos: [],                   // Array<[id,id]>
+      inDuo: new Set(),           // Set<id>
+      _duoQueue: [],
+
+      // Données
+      students: ensureStudentIds(Store.read("students","[]") || []),
+      quizzes:  Store.read("quizzes","[]") || [],
+
+      // index rapide id -> student
+      index: new Map(),
 
       // rendu paresseux
       pool: [], filtered: [], page: 0, pageSize: 120
@@ -379,6 +408,13 @@
     const $$ = sel => Array.from(document.querySelectorAll(sel));
     const sanitize = s => String(s||"").replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
     const initials = str => (str||"").split(/\s+/).map(s=>s[0]||"").join("").slice(0,2).toUpperCase();
+    const uniq = arr => [...new Set(arr)];
+
+    function getById(id){ return wiz.index.get(id) || null; }
+    function buildIndex(){
+      wiz.index.clear();
+      (wiz.students||[]).forEach(st=> wiz.index.set(st.id, st));
+    }
 
     /* ========= Éléments ========= */
     const stepEls = { s1:$("#s1"), s2:$("#s2"), s3:$("#s3"), s4:$("#s4") };
@@ -426,7 +462,7 @@
     matiere.onchange = ()=> wiz.subject = matiere.value;
     function refreshQuizOptions(){
       const allowed = wiz.classes.length
-        ? wiz.quizzes.filter(q => Array.isArray(q.classes) && q.classes.some(c=>wiz.classes.includes(c)))
+        ? wiz.quizzes.filter(q => Array.isArray(q.classes) ? q.classes.some(c=>wiz.classes.includes(c)) : true)
         : wiz.quizzes;
       quizSel.innerHTML = `<option value="">Aucun</option>` + allowed.map(q=>`<option>${sanitize(q.title||"(Sans titre)")}</option>`).join("");
       if(allowed.some(q=>q.title===wiz.quizTitle)) quizSel.value = wiz.quizTitle; else quizSel.value = "";
@@ -434,7 +470,9 @@
     quizSel.onchange = ()=> wiz.quizTitle = quizSel.value;
 
     /* ========= Step 2 ========= */
-    const classesAll = [...new Set(wiz.students.map(s=>s.classe).filter(c=>c && c!=="Inconnue"))].sort();
+    function classesAll(){
+      return uniq((wiz.students||[]).map(s=>s.classe).filter(c=>c && c!=="Inconnue")).sort();
+    }
     function refreshClassesUI(){
       // chips sélectionnées
       classChips.innerHTML = wiz.classes.length
@@ -443,10 +481,11 @@
       $$("#classChips .x").forEach(x => x.onclick = ()=>{ wiz.classes = wiz.classes.filter(c=>c!==x.dataset.c); refreshClassesUI(); refreshQuizOptions(); });
 
       // picker
-      classPicker.innerHTML = classesAll.filter(c=>!wiz.classes.includes(c)).map(c=>`<option>${sanitize(c)}</option>`).join("");
+      const all = classesAll();
+      classPicker.innerHTML = all.filter(c=>!wiz.classes.includes(c)).map(c=>`<option>${sanitize(c)}</option>`).join("");
 
       // grille
-      classesGrid.innerHTML = classesAll.map(c=>{
+      classesGrid.innerHTML = all.map(c=>{
         const count = wiz.students.filter(s=>s.classe===c).length;
         const sel = wiz.classes.includes(c);
         return `<div class="c-card">
@@ -462,7 +501,7 @@
       }).join("");
       // actions
       $$('#classesGrid [data-add]').forEach(b=> b.onclick = ()=>{ const c=b.getAttribute('data-add'); if(!wiz.classes.includes(c)) wiz.classes.push(c); refreshClassesUI(); refreshQuizOptions(); });
-      $$('#classesGrid [data-all]').forEach(b=> b.onclick = ()=>{ const c=b.getAttribute('data-all'); wiz.students.filter(s=>s.classe===c).forEach(s=> wiz.selected.add(s.name)); updateSelectedUI(); });
+      $$('#classesGrid [data-all]').forEach(b=> b.onclick = ()=>{ const c=b.getAttribute('data-all'); wiz.students.filter(s=>s.classe===c).forEach(s=> wiz.selected.add(s.id)); updateSelectedUI(); });
     }
     $("#addClass").onclick = ()=>{
       const typed = classInput.value.trim(), pick = classPicker.value;
@@ -475,8 +514,9 @@
     $("#to2").onclick = ()=> setStep(2);
     $("#to3").onclick = ()=> setStep(3);
 
-    /* ========= Step 3 : Joueurs ========= */
+    /* ========= Step 3 : Joueurs (sélection par ID) ========= */
     function buildPool(){
+      buildIndex();
       wiz.pool = wiz.students.filter(s => wiz.classes.length ? wiz.classes.includes(s.classe) : true);
       wiz.filtered = wiz.pool; wiz.page = 0;
     }
@@ -492,8 +532,8 @@
       const slice = wiz.filtered.slice(start, start + wiz.pageSize);
 
       slice.forEach(s=>{
-        const checked = wiz.selected.has(s.name);
-        const inDuo = wiz.inDuo.has(s.name);
+        const checked = wiz.selected.has(s.id);
+        const inDuo = wiz.inDuo.has(s.id);
         const row = document.createElement('div'); row.className = 'row';
         row.innerHTML = `
           <div class="avatar">${sanitize(initials(s.name))}</div>
@@ -502,17 +542,17 @@
             <div class="muted">${sanitize(s.classe||"—")}</div>
           </div>
           <div class="actions">
-            <button class="mini" data-t="${sanitize(s.name)}">${checked?'Retirer':'Ajouter'}</button>
-            <button class="mini duo" data-d="${sanitize(s.name)}" ${(!wiz.mixteMode || inDuo)?'disabled':''}>DUO</button>
+            <button class="mini" data-t="${s.id}">${checked?'Retirer':'Ajouter'}</button>
+            <button class="mini duo" data-d="${s.id}" ${(!wiz.mixteMode || inDuo)?'disabled':''}>DUO</button>
           </div>`;
         const add = row.querySelector('[data-t]');
         add.onclick = ()=>{
-          if(wiz.selected.has(s.name)){ wiz.selected.delete(s.name); removeFromDuoIfPresent(s.name); }
-          else { wiz.selected.add(s.name); }
+          if(wiz.selected.has(s.id)){ wiz.selected.delete(s.id); removeFromDuoIfPresent(s.id); }
+          else { wiz.selected.add(s.id); }
           updateSelectedUI();
         };
         const duo = row.querySelector('[data-d]');
-        duo.onclick = ()=> handleDuoClick(s.name);
+        duo.onclick = ()=> handleDuoClick(s.id);
         list.appendChild(row);
       });
 
@@ -525,39 +565,37 @@
 
       // chips des sélectionnés
       chipsSel.innerHTML = "";
-      [...wiz.selected].sort((a,b)=>a.localeCompare(b)).forEach(n=>{
+      [...wiz.selected].map(id=>getById(id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name)).forEach(st=>{
         const chip = document.createElement('span'); chip.className='chip';
-        chip.innerHTML = `${sanitize(n)} <button class="x" aria-label="Retirer">✕</button>`;
-        chip.querySelector('.x').onclick = ()=>{ wiz.selected.delete(n); removeFromDuoIfPresent(n); updateSelectedUI(); renderList(true); };
+        chip.innerHTML = `${sanitize(st.name)} <button class="x" aria-label="Retirer">✕</button>`;
+        chip.querySelector('.x').onclick = ()=>{ wiz.selected.delete(st.id); removeFromDuoIfPresent(st.id); updateSelectedUI(); renderList(true); };
         chipsSel.appendChild(chip);
       });
 
       // boutons DUO activables
       $$('#list [data-d]').forEach(b=>{
-        const name = b.getAttribute('data-d');
-        const can = wiz.mixteMode && wiz.selected.has(name) && !wiz.inDuo.has(name);
+        const id = b.getAttribute('data-d');
+        const can = wiz.mixteMode && wiz.selected.has(id) && !wiz.inDuo.has(id);
         b.disabled = !can;
       });
 
       // aperçu mixte
       renderDuosPreview();
     }
-    function handleDuoClick(name){
-      if(!wiz.mixteMode || !wiz.selected.has(name)) return;
-      if(wiz.inDuo.has(name)){ removeFromDuoIfPresent(name); updateSelectedUI(); return; }
-      // file d'attente
-      if(!wiz._duoQueue){ wiz._duoQueue = []; }
-      if(!wiz._duoQueue.includes(name)) wiz._duoQueue.push(name);
+    function handleDuoClick(id){
+      if(!wiz.mixteMode || !wiz.selected.has(id)) return;
+      if(wiz.inDuo.has(id)){ removeFromDuoIfPresent(id); updateSelectedUI(); return; }
+      if(!wiz._duoQueue.includes(id)) wiz._duoQueue.push(id);
       if(wiz._duoQueue.length===2){
         const [a,b]=wiz._duoQueue.splice(0,2);
         wiz.duos.push([a,b]); wiz.inDuo.add(a); wiz.inDuo.add(b);
       }
       updateSelectedUI();
     }
-    function removeFromDuoIfPresent(name){
+    function removeFromDuoIfPresent(id){
       let changed=false;
       for(let i=wiz.duos.length-1;i>=0;i--){
-        if(wiz.duos[i].includes(name)){
+        if(wiz.duos[i].includes(id)){
           const [a,b]=wiz.duos[i]; wiz.duos.splice(i,1); wiz.inDuo.delete(a); wiz.inDuo.delete(b); changed=true;
         }
       }
@@ -566,16 +604,17 @@
     function renderDuosPreview(){
       duosDisplay.innerHTML = "";
       if(!wiz.mixteMode){ duosDisplay.innerHTML = `<span class="muted">Mode mixte désactivé.</span>`; return; }
-      [...wiz.duos].forEach(pair=>{
+      [...wiz.duos].forEach(([idA,idB])=>{
+        const a=getById(idA), b=getById(idB); if(!a||!b) return;
         const pill = document.createElement('span'); pill.className='chip';
-        pill.innerHTML = `${sanitize(pair[0])} + ${sanitize(pair[1])} <button class="x">✕</button>`;
+        pill.innerHTML = `${sanitize(a.name)} + ${sanitize(b.name)} <button class="x">✕</button>`;
         pill.querySelector('.x').onclick = ()=>{
-          const i = wiz.duos.findIndex(d=>d[0]===pair[0] && d[1]===pair[1]);
-          if(i>=0){ const [a,b]=wiz.duos[i]; wiz.duos.splice(i,1); wiz.inDuo.delete(a); wiz.inDuo.delete(b); renderDuosPreview(); updateSelectedUI(); }
+          const i = wiz.duos.findIndex(d=>d[0]===idA && d[1]===idB);
+          if(i>=0){ const [x,y]=wiz.duos[i]; wiz.duos.splice(i,1); wiz.inDuo.delete(x); wiz.inDuo.delete(y); renderDuosPreview(); updateSelectedUI(); }
         };
         duosDisplay.appendChild(pill);
       });
-      const solos = [...wiz.selected].filter(n=>!wiz.inDuo.has(n));
+      const solos = [...wiz.selected].filter(id=>!wiz.inDuo.has(id));
       if(solos.length){
         const pill = document.createElement('span'); pill.className='chip';
         pill.textContent = `${solos.length} joueur(s) solo`;
@@ -586,14 +625,14 @@
 
     $("#selectAllVisible").onclick = ()=>{
       const start = wiz.page * wiz.pageSize;
-      const slice = wiz.filtered.slice(0, start + wiz.pageSize); // visibles actuellement
-      slice.forEach(s=> wiz.selected.add(s.name));
+      const slice = wiz.filtered.slice(0, start + wiz.pageSize); // visibles
+      slice.forEach(s=> wiz.selected.add(s.id));
       updateSelectedUI(); renderList(true);
     };
     $("#unselectAllVisible").onclick = ()=>{
       const start = wiz.page * wiz.pageSize;
       const slice = wiz.filtered.slice(0, start + wiz.pageSize);
-      slice.forEach(s=> wiz.selected.delete(s.name));
+      slice.forEach(s=> wiz.selected.delete(s.id));
       updateSelectedUI(); renderList(true);
     };
 
@@ -633,9 +672,22 @@
 
     function groupByTwo(arr){ const res=[]; for(let i=0;i<arr.length;i+=2){ res.push(arr.slice(i,i+2)); } return res; }
 
+    // Produire des noms d’affichage uniques (pour l’ancien jeu.html)
+    function uniqueDisplayNames(ids){
+      const nameCounts = new Map();
+      const display = new Map();
+      ids.forEach(id=>{
+        const st=getById(id); if(!st) return;
+        const base = (st.name||'').trim();
+        const n = (nameCounts.get(base)||0)+1; nameCounts.set(base,n);
+        display.set(id, n===1 ? base : `${base} (#${n})`);
+      });
+      return display; // Map<id,displayName>
+    }
+
     function startGame(){
-      const selected = [...wiz.selected];
-      if(!selected.length){ alert("Sélectionne au moins un joueur."); return; }
+      const ids = [...wiz.selected];
+      if(!ids.length){ alert("Sélectionne au moins un joueur."); return; }
 
       // Sauvegardes pour jeu.html
       localStorage.setItem("nomPartie", wiz.name || "Partie sans nom");
@@ -667,43 +719,57 @@
       };
       localStorage.setItem("gameModes", JSON.stringify(modePayload));
 
-      // Construction des paramètres d’URL
+      // Mapping id -> infos (pour un futur jeu.html basé sur IDs)
+      const dispMap = uniqueDisplayNames(ids);
+      const playersMap = {};
+      ids.forEach(id=>{
+        const st=getById(id); if(!st) return;
+        playersMap[id] = { id, name: st.name, classe: st.classe, display: dispMap.get(id) };
+      });
+      localStorage.setItem("playersMap", JSON.stringify(playersMap));
+
+      const subject = encodeURIComponent(wiz.subject);
+
       if(wiz.mixteMode){
-        const solos = selected.filter(n=>!wiz.inDuo.has(n)).map(n=>[n]);
-        const teams = [...wiz.duos.map(d=>[d[0],d[1]]), ...solos];
-        if(!teams.length){ alert("Crée au moins un duo ou laisse des joueurs en solo."); return; }
-        location.href = `jeu.html?teams=${encodeURIComponent(JSON.stringify(teams))}&subject=${encodeURIComponent(wiz.subject)}`;
+        // teamsIds: [[id,id], [id], ...]
+        const solos = ids.filter(id=>!wiz.inDuo.has(id)).map(id=>[id]);
+        const teamsIds = [...wiz.duos.map(d=>[d[0],d[1]]), ...solos];
+
+        // Legacy: teams avec noms désambiguïsés
+        const teamsNames = teamsIds.map(arr => arr.map(id=>dispMap.get(id)));
+
+        localStorage.setItem("teamsIds", JSON.stringify(teamsIds));
+        // URL : legacy + ids
+        location.href = `jeu.html?teams=${encodeURIComponent(JSON.stringify(teamsNames))}&teamsIds=${encodeURIComponent(JSON.stringify(teamsIds))}&subject=${subject}`;
         return;
       }
 
       if(wiz.duoMode){
-        if(selected.length % 2 !== 0){ alert("En mode duo, le nombre de joueurs doit être pair."); return; }
-        const groupes = groupByTwo(selected);
-        location.href = `jeu.html?duos=${encodeURIComponent(JSON.stringify(groupes))}&subject=${encodeURIComponent(wiz.subject)}`;
+        if(ids.length % 2 !== 0){ alert("En mode duo, le nombre de joueurs doit être pair."); return; }
+        const duosIds = groupByTwo(ids);
+        const duosNames = duosIds.map(pair => pair.map(id=>dispMap.get(id)));
+
+        localStorage.setItem("duosIds", JSON.stringify(duosIds));
+        location.href = `jeu.html?duos=${encodeURIComponent(JSON.stringify(duosNames))}&duosIds=${encodeURIComponent(JSON.stringify(duosIds))}&subject=${subject}`;
       } else {
-        location.href = `jeu.html?students=${encodeURIComponent(JSON.stringify(selected))}&subject=${encodeURIComponent(wiz.subject)}`;
+        const names = ids.map(id=>dispMap.get(id));
+        localStorage.setItem("studentsIds", JSON.stringify(ids));
+        location.href = `jeu.html?students=${encodeURIComponent(JSON.stringify(names))}&studentsIds=${encodeURIComponent(JSON.stringify(ids))}&subject=${subject}`;
       }
     }
 
     /* ========= Init ========= */
     (function init(){
       // Empêche la reprise d'état quand on revient en arrière (bfcache)
-      window.addEventListener('pageshow', (e)=>{
-        if (e.persisted) { window.location.reload(); }
-      });
-
-      // Optionnel : purger d’anciens résidus (sans toucher à une partie en cours dans jeu.html)
-      ["nomPartie","quizTitle","quizQuestions","modeDuo","modeMixte"].forEach(k=>localStorage.removeItem(k));
+      window.addEventListener('pageshow', (e)=>{ if (e.persisted) { window.location.reload(); } });
 
       // Forcer un formulaire vierge
-      nom.value = "";
-      wiz.name = "";
-      wiz.subject = "Français";
-      matiere.value = "Français";
-      wiz.quizTitle = "";
-      quizSel.value = "";
+      nom.value = ""; wiz.name = "";
+      wiz.subject = "Français"; matiere.value = "Français";
+      wiz.quizTitle = ""; quizSel.value = "";
 
-      // UI initiale
+      // Construire l'index et UI
+      buildIndex();
       refreshClassesUI();
       refreshQuizOptions();
       setStep(1);
