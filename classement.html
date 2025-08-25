@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Classement Général</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
 :root {
   --bg: #f8faf9;
@@ -14,124 +15,182 @@
   --gold: #fbbf24;
   --silver: #d1d5db;
   --bronze: #f59e0b;
+  --chip:#f1f5f9;
 }
+*{box-sizing:border-box}
 body {
-  font-family: system-ui, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   background: linear-gradient(160deg,#fff,#f8faf9 40%,#e6fff3 100%);
   margin: 0;
   padding: 20px;
   color: var(--text);
 }
 .container {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: auto;
   background: white;
   border-radius: 20px;
-  padding: 25px;
+  padding: 22px;
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 }
 h1 {
   text-align: center;
-  margin-bottom: 15px;
+  margin: 0 0 16px;
 }
-.search-box {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-bottom: 20px;
-  gap: 8px;
+.toolbar{
+  display:grid; grid-template-columns: 1fr; gap:10px; margin-bottom:14px
 }
-.search-box input {
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  font-size: 15px;
-  width: 300px;
+@media (min-width:900px){
+  .toolbar{ grid-template-columns: auto 1fr auto; align-items:center }
 }
-.search-box .icon {
-  font-size: 18px;
-  color: var(--muted);
+.filters{
+  display:flex; gap:8px; flex-wrap:wrap; align-items:center
 }
+select,input[type="search"]{
+  padding:10px 12px; border-radius:12px; border:1px solid var(--border);
+  font-size:14px; background:#fff; min-width: 160px;
+}
+.search-box{
+  display:flex; align-items:center; gap:8px; justify-self:center
+}
+.search-box input{ width:280px }
+.actions{ justify-self:end; display:flex; gap:8px; flex-wrap:wrap }
+.btn{
+  background:#fff; border:1px solid var(--border); border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:800
+}
+.btn.primary{ background:var(--mint); color:#064e3b; border-color:#9ae6b4 }
+.btn:hover{ filter:brightness(0.98) }
+
+.info{
+  margin:8px 0 0; color:#475569; font-size:12px; background:#f8fafc; border:1px solid #e2e8f0; padding:8px 10px; border-radius:10px
+}
+
 .podium {
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  margin: 30px 0 40px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+  gap: 16px;
+  margin: 18px 0 22px;
 }
 .podium .player {
   text-align: center;
+  background:#fdfdfd; border:1px solid var(--border); border-radius:14px; padding:12px
 }
 .podium .avatar {
   width: 90px; height: 90px;
+  margin: 0 auto 6px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-size: 26px; font-weight: 700; color: white;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08)
 }
-.podium .name { margin-top: 6px; font-weight: 600; }
-.podium .score { color: var(--mint-strong); font-weight: 700; }
+.podium .name { margin-top: 6px; font-weight: 800; }
+.podium .meta { font-size:12px; color:var(--muted) }
+.podium .score { color: var(--mint-strong); font-weight: 900; margin-top:4px }
+
 .list { display: flex; flex-direction: column; gap: 10px; }
 .item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 14px;
+  display: grid; grid-template-columns: auto 1fr auto; gap:12px; align-items: center;
+  padding: 10px 12px;
   background: #fdfdfd; border: 1px solid var(--border);
   border-radius: 12px;
 }
 .item:hover { background: #f8fdfb; }
-.item .left { display: flex; align-items: center; gap: 10px; }
+.rank{
+  width:36px; text-align:center; font-weight:900; color:#0f172a
+}
+.item .left { display: flex; align-items: center; gap: 10px; min-width:0 }
 .avatar-small {
   width: 36px; height: 36px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 700; color: white;
+  font-weight: 900; color: white;
 }
-.score { font-weight: 700; color: var(--mint-strong); }
+.name-wrap{ min-width:0 }
+.name{ font-weight:900; }
+.dim{ color:var(--muted); font-size:12px }
+.score { font-weight: 900; color: var(--mint-strong); text-align:right }
+.details{
+  display:flex; align-items:center; gap:8px
+}
+.chip{
+  background:var(--chip); border:1px solid #e2e8f0; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:800; color:#0f172a
+}
 .details-btn {
   background: var(--mint);
   border: none; border-radius: 8px;
-  padding: 4px 8px; font-size: 12px; cursor: pointer;
-  color: #064e3b;
-  transition: background 0.2s;
+  padding: 6px 10px; font-size: 12px; cursor: pointer;
+  color: #064e3b; font-weight:900
 }
-.details-btn:hover {
-  background: var(--mint-strong);
-  color: white;
+.details-btn:hover { background: var(--mint-strong); color: white; }
+
+.empty{
+  padding:18px; text-align:center; border:1px dashed var(--border); border-radius:12px; color:var(--muted); font-weight:800;
+  background:#fff
 }
+
+/* Modal */
 .modal {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(0,0,0,0.35);
   display: flex; align-items: center; justify-content: center;
-  opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s ease; z-index:20
 }
 .modal.active { opacity: 1; pointer-events: auto; }
 .modal-content {
-  background: white; border-radius: 16px; padding: 20px;
-  max-width: 400px; width: 90%;
+  background: white; border-radius: 16px; padding: 16px;
+  max-width: 520px; width: 92%;
   box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
-.modal-header { font-weight: 700; font-size: 18px; margin-bottom: 10px; }
+.modal-header { font-weight: 900; font-size: 18px; margin-bottom: 8px; }
 .modal-body { font-size: 14px; line-height: 1.5; }
 .close-btn {
-  margin-top: 15px;
+  margin-top: 12px;
   background: var(--mint); border: none; padding: 8px 14px;
-  border-radius: 8px; cursor: pointer; font-weight: 600; color: #064e3b;
+  border-radius: 8px; cursor: pointer; font-weight: 900; color: #064e3b;
 }
-.close-btn:hover {
-  background: var(--mint-strong);
-  color: white;
-}
+.close-btn:hover { background: var(--mint-strong); color:#fff }
 </style>
 </head>
 <body>
 <div class="container">
   <h1>🏆 Classement Général</h1>
-  <div class="search-box">
-    <span class="icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="Rechercher un élève...">
+
+  <div class="toolbar">
+    <div class="filters">
+      <select id="range">
+        <option value="30">30 jours</option>
+        <option value="90">90 jours</option>
+        <option value="365">365 jours</option>
+        <option value="all" selected>Tout</option>
+      </select>
+      <select id="byClass"><option value="">Toutes classes</option></select>
+      <select id="bySubject"><option value="">Toutes matières</option></select>
+      <select id="sort">
+        <option value="total">Tri : Total points</option>
+        <option value="avg">Tri : Moyenne/partie</option>
+        <option value="games">Tri : Parties jouées</option>
+        <option value="last">Tri : Dernière activité</option>
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+        <input type="checkbox" id="mergeNames"> Fusionner homonymes
+      </label>
+    </div>
+    <div class="search-box">
+      <input type="search" id="searchInput" placeholder="Rechercher nom…">
+    </div>
+    <div class="actions">
+      <button class="btn" id="resetBtn">Réinitialiser</button>
+      <button class="btn primary" id="exportBtn">⬇️ Export CSV</button>
+    </div>
   </div>
+
+  <div id="ambigInfo" class="info" style="display:none"></div>
+
   <div class="podium" id="podium"></div>
-  <div class="list" id="rankingList"></div>
+  <div id="rankingList" class="list"></div>
+  <div id="empty" class="empty" style="display:none">Aucune donnée pour ces filtres.</div>
 </div>
 
+<!-- Modal détails -->
 <div class="modal" id="detailsModal" onclick="if(event.target===this)closeModal()">
   <div class="modal-content">
     <div class="modal-header" id="modalTitle"></div>
@@ -141,99 +200,300 @@ h1 {
 </div>
 
 <script>
-function getInitials(name) {
-  return name.split(" ").map(n => n[0]).join("").toUpperCase();
-}
-function getColor(i) {
-  const colors = ["#f87171","#60a5fa","#34d399","#fbbf24","#a78bfa","#f472b6","#fb923c"];
-  return colors[i % colors.length];
-}
-function aggregatePointsIndividuels() {
-  let students = JSON.parse(localStorage.getItem("students") || "[]");
-  let pointsByName = {};
+/* ===== Utils ===== */
+const $=s=>document.querySelector(s);
+const $$=s=>Array.from(document.querySelectorAll(s));
+const esc = s => String(s??"").replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[m]));
+const initials = name => (name||'').split(/\s+/).map(x=>x[0]||'').join('').slice(0,2).toUpperCase();
+const palette = ["#f87171","#60a5fa","#34d399","#fbbf24","#a78bfa","#f472b6","#fb923c","#22d3ee","#f43f5e","#84cc16"];
 
-  students.forEach(s => {
-    if (!s.name) return;
+/* ===== Data layer (lecture robuste) ===== */
+function readLS(k, fb){ try{ const raw=localStorage.getItem(k); return raw? JSON.parse(raw): fb; }catch{ return fb; } }
+const STUDENTS = readLS('students', []);
+const BY_CLASS = readLS('studentsByClass', {});
+const HISTORY  = readLS('historiqueParties', []); // [{dateIso, nom, matiere, modeDuo, scores:{ "A + B": 10, ...}}]
 
-    if (s.name.includes("+")) {
-      const members = s.name.split("+").map(n => n.trim());
-      const share = (s.points || 0) / members.length;
-      members.forEach(m => {
-        pointsByName[m] = (pointsByName[m] || 0) + share;
+/* classes disponibles (depuis étudiants + legacy) */
+const ALL_CLASSES = (()=> {
+  const set = new Set(Object.keys(BY_CLASS||{}));
+  (STUDENTS||[]).forEach(s=>{ if(s.classe) set.add(s.classe); });
+  return [...set].sort();
+})();
+
+/* matières disponibles (depuis l’historique) */
+const ALL_SUBJECTS = (()=> {
+  const set = new Set();
+  (HISTORY||[]).forEach(h=>{ if(h.matiere) set.add(h.matiere); });
+  return [...set].sort();
+})();
+
+/* Index nom -> classes connues (pour filtrage classe + homonymes) */
+const NAME_TO_CLASSES = (()=> {
+  const map = new Map();
+  (STUDENTS||[]).forEach(s=>{
+    const n=(s.name||'').trim(); const c=(s.classe||'').trim();
+    if(!n) return;
+    if(!map.has(n)) map.set(n, new Set());
+    if(c) map.get(n).add(c);
+  });
+  // legacy: studentsByClass
+  Object.entries(BY_CLASS||{}).forEach(([cls, arr])=>{
+    (arr||[]).forEach(n=>{
+      n=String(n).trim(); if(!n) return;
+      if(!map.has(n)) map.set(n, new Set());
+      map.get(n).add(cls);
+    });
+  });
+  const obj={};
+  map.forEach((set, n)=> obj[n]=[...set]);
+  return obj;
+})();
+
+/* Remplit filtres */
+(function fillFilters(){
+  $('#byClass').innerHTML = `<option value="">Toutes classes</option>` + ALL_CLASSES.map(c=>`<option>${esc(c)}</option>`).join('');
+  $('#bySubject').innerHTML = `<option value="">Toutes matières</option>` + ALL_SUBJECTS.map(m=>`<option>${esc(m)}</option>`).join('');
+})();
+
+/* ===== Agrégation à partir de l’historique =====
+   - Pour chaque partie dans la période choisie
+   - Pour chaque équipe: on répartit (score / nbMembres) à chaque membre
+   - Filtre classe: si activé, on essaie d’associer un élève à sa/aux classe(s).
+     * S’il a plusieurs classes possibles et qu’une classe est filtrée, on ne compte que s’il a précisément cette classe.
+     * Ambiguïtés remontées dans un bandeau. */
+function withinRange(dateIso, rangeVal){
+  if(rangeVal==='all') return true;
+  const days=parseInt(rangeVal,10)||30;
+  const t0=Date.now()-days*24*3600*1000;
+  return new Date(dateIso||0).getTime()>=t0;
+}
+
+function computeRanking(){
+  const range = $('#range').value;
+  const classFilter = $('#byClass').value.trim();
+  const subjectFilter = $('#bySubject').value.trim();
+  const merge = $('#mergeNames').checked;
+  const q = ($('#searchInput').value||'').toLowerCase();
+
+  const ambig = new Set(); // noms ambigus lors d’un filtrage de classe
+  const acc = new Map();   // key -> { name, classe, total, games, lastAt, bySubject:{} }
+
+  (HISTORY||[]).forEach(game=>{
+    if(!withinRange(game.dateIso, range)) return;
+    if(subjectFilter && (game.matiere||'') !== subjectFilter) return;
+
+    const scores = game.scores || {};
+    Object.entries(scores).forEach(([teamKey, score])=>{
+      const members = String(teamKey).split('+').map(s=>s.trim()).filter(Boolean);
+      const share = Number(score||0) / Math.max(1, members.length);
+
+      members.forEach(n=>{
+        // Déterminer la/les classes possibles
+        const classes = NAME_TO_CLASSES[n] || [];
+        let targets = [];
+
+        if(classFilter){
+          // Si filtre classe : on ne garde que la classe exacte ; si nom non mappable ou multi-classes ≠ classFilter => ambigu
+          if(classes.length===0){
+            // inconnu -> on considère "inconnue" (ne comptera que si classFilter vide)
+          } else if(classes.includes(classFilter)){
+            targets = [{name:n, classe:classFilter}];
+          } else {
+            // nom connu mais pas dans cette classe → ignorer
+            return;
+          }
+        } else {
+          // Pas de filtre de classe
+          if(classes.length<=1){
+            const c = classes[0] || '';
+            targets = [{name:n, classe:c}];
+          } else {
+            // plusieurs classes possibles → si on fusionne homonymes, une seule ligne; sinon, une ligne par classe
+            if(merge){
+              targets = [{name:n, classe:''}]; // classe masquée (fusion)
+            }else{
+              targets = classes.map(c=>({name:n, classe:c}));
+            }
+          }
+        }
+
+        if(!targets.length){
+          // Cas: classe inconnue + classFilter vide
+          if(!classFilter) targets = [{name:n, classe:''}];
+        }
+
+        // Indiquer ambiguïtés si classFilter actif et nom a >1 classes possibles
+        if(classFilter && (NAME_TO_CLASSES[n]?.length>1) && !NAME_TO_CLASSES[n].includes(classFilter)){
+          ambig.add(n);
+        }
+
+        targets.forEach(t=>{
+          const key = merge ? t.name.toLowerCase() : (t.name.toLowerCase()+'|'+(t.classe||''));
+          if(!acc.has(key)){
+            acc.set(key, { name:t.name, classe:t.classe||'', total:0, games:0, lastAt:0, bySubject:{} });
+          }
+          const row = acc.get(key);
+          row.total += share;
+          row.games += 1;
+          const ts = new Date(game.dateIso||0).getTime() || Date.now();
+          row.lastAt = Math.max(row.lastAt, ts);
+          const subj = game.matiere || '—';
+          row.bySubject[subj] = (row.bySubject[subj]||0) + share;
+          acc.set(key, row);
+        });
       });
-    } else {
-      pointsByName[s.name] = (pointsByName[s.name] || 0) + (s.points || 0);
-    }
+    });
   });
 
-  return Object.entries(pointsByName).sort((a, b) => b[1] - a[1]);
+  // Recherche + tri
+  let rows = [...acc.values()];
+  if(q) rows = rows.filter(r => r.name.toLowerCase().includes(q));
+
+  const sortBy = $('#sort').value;
+  rows.forEach(r => r.avg = r.games? (r.total/r.games):0);
+  rows.sort((a,b)=>{
+    if(sortBy==='avg')   return (b.avg - a.avg) || (b.total - a.total) || a.name.localeCompare(b.name);
+    if(sortBy==='games') return (b.games - a.games) || (b.total - a.total) || a.name.localeCompare(b.name);
+    if(sortBy==='last')  return (b.lastAt - a.lastAt) || (b.total - a.total) || a.name.localeCompare(b.name);
+    return (b.total - a.total) || (b.avg - a.avg) || a.name.localeCompare(b.name); // total
+  });
+
+  // Podium = top 3
+  const top3 = rows.slice(0,3);
+
+  return {rows, top3, ambig};
 }
 
-function renderRanking() {
-  const search = document.getElementById("searchInput").value.toLowerCase();
-  const list = document.getElementById("rankingList");
-  const podiumDiv = document.getElementById("podium");
-  list.innerHTML = "";
-  podiumDiv.innerHTML = "";
+/* ===== Rendu ===== */
+function render(){
+  const {rows, top3, ambig} = computeRanking();
+  const podiumDiv = $('#podium');
+  const listDiv   = $('#rankingList');
+  const empty     = $('#empty');
+  const ambigBox  = $('#ambigInfo');
 
-  let ranking = aggregatePointsIndividuels();
-  if (search) ranking = ranking.filter(([name]) => name.toLowerCase().includes(search));
+  // Ambiguïtés
+  if(ambig.size && $('#byClass').value){
+    ambigBox.style.display='block';
+    ambigBox.innerHTML = `ℹ️ <b>Homonymes détectés</b> dans la classe filtrée : ${[...ambig].slice(0,5).join(', ')}${ambig.size>5?'…':''}. ` +
+                         `Si besoin, décoche “Fusionner homonymes” et/ou précisez la classe des élèves dans <b>Élèves</b>.`;
+  }else{
+    ambigBox.style.display='none';
+  }
 
-  const top3 = ranking.slice(0, 3);
+  // Podium
+  podiumDiv.innerHTML = '';
   const colors = ['var(--gold)', 'var(--silver)', 'var(--bronze)'];
-  top3.forEach((player, i) => {
-    const div = document.createElement("div");
-    div.className = "player";
+  top3.forEach((p,i)=>{
+    const div = document.createElement('div');
+    div.className='player';
     div.innerHTML = `
-      <div class="avatar" style="background:${colors[i]}">${getInitials(player[0])}</div>
-      <div class="name">${player[0]}</div>
-      <div class="score">${player[1].toFixed(1)} pts</div>
+      <div class="avatar" style="background:${colors[i]}">${initials(p.name)}</div>
+      <div class="name">${esc(p.name)}</div>
+      <div class="meta">${p.classe? esc(p.classe) : '—'}</div>
+      <div class="score">${p.total.toFixed(1)} pts</div>
     `;
     podiumDiv.appendChild(div);
   });
 
-  ranking.forEach(([name, score], i) => {
-    const div = document.createElement("div");
-    div.className = "item";
-    div.innerHTML = `
+  // Liste
+  listDiv.innerHTML = '';
+  rows.forEach((r,idx)=>{
+    const item = document.createElement('div');
+    item.className='item';
+    const color = palette[idx % palette.length];
+    const dateTxt = r.lastAt ? new Date(r.lastAt).toLocaleDateString() : '—';
+    item.innerHTML = `
+      <div class="rank">${idx+1}</div>
       <div class="left">
-        <div class="avatar-small" style="background:${getColor(i)}">${getInitials(name)}</div>
-        <span>${i + 1}. ${name}</span>
+        <div class="avatar-small" style="background:${color}">${initials(r.name)}</div>
+        <div class="name-wrap">
+          <div class="name">${esc(r.name)}</div>
+          <div class="dim">${r.classe? esc(r.classe) : '—'} · ${r.games} partie(s) · moy ${r.avg.toFixed(2)}</div>
+        </div>
       </div>
-      <div class="right">
-        <span class="score">${score.toFixed(1)} pts</span>
-        <button class="details-btn" onclick="showDetails('${name}')">Détails</button>
+      <div class="details">
+        <span class="chip">Dernière activité : ${esc(dateTxt)}</span>
+        <div class="score" style="min-width:110px">${r.total.toFixed(1)} pts</div>
+        <button class="details-btn" data-name="${esc(r.name)}" data-classe="${esc(r.classe)}">Détails</button>
       </div>
     `;
-    list.appendChild(div);
+    listDiv.appendChild(item);
+  });
+
+  empty.style.display = rows.length ? 'none' : 'block';
+
+  // Boutons détails
+  $$('#rankingList .details-btn').forEach(b=>{
+    b.onclick = ()=> showDetails(b.getAttribute('data-name'), b.getAttribute('data-classe'));
   });
 }
 
-function showDetails(name) {
-  let students = JSON.parse(localStorage.getItem("students") || "[]");
-  let s = students.find(st => st.name === name);
-  document.getElementById("modalTitle").textContent = `Statistiques de ${name}`;
-  let html = "";
-  if (s) {
-    html += `<strong>Classe :</strong> ${s.classe || "Inconnue"}<br>`;
-    html += `<strong>Points totaux :</strong> ${(s.points || 0).toFixed(1)}<br>`;
-    if (s.subjects) {
-      html += `<br><strong>Par matière :</strong><br>`;
-      for (const [mat, pts] of Object.entries(s.subjects)) {
-        html += ` - ${mat} : ${pts.toFixed(1)} pts<br>`;
-      }
+/* ===== Détails ===== */
+function showDetails(name, classe){
+  const {rows} = computeRanking();
+  const row = rows.find(r => r.name===name && (r.classe||'')===(classe||''))
+           || rows.find(r => r.name===name); // fallback si fusion homonymes
+  $('#modalTitle').textContent = `Statistiques de ${name}${classe? ' — '+classe : ''}`;
+  let html = '';
+  if(row){
+    html += `<b>Total</b> : ${row.total.toFixed(1)} pts<br>`;
+    html += `<b>Parties jouées</b> : ${row.games}<br>`;
+    html += `<b>Moyenne/partie</b> : ${row.avg.toFixed(2)}<br>`;
+    if(row.lastAt) html += `<b>Dernière activité</b> : ${new Date(row.lastAt).toLocaleString()}<br>`;
+    const subj = Object.entries(row.bySubject||{}).sort((a,b)=>b[1]-a[1]);
+    if(subj.length){
+      html += `<br><b>Par matière</b> :<br>`;
+      subj.forEach(([m,pts])=>{ html += `• ${esc(m)} : ${pts.toFixed(1)} pts<br>`; });
     }
   } else {
-    html = "Aucune donnée trouvée.";
+    html = 'Aucune donnée.';
   }
-  document.getElementById("modalBody").innerHTML = html;
-  document.getElementById("detailsModal").classList.add("active");
+  $('#modalBody').innerHTML = html;
+  $('#detailsModal').classList.add('active');
 }
-function closeModal() {
-  document.getElementById("detailsModal").classList.remove("active");
+function closeModal(){ $('#detailsModal').classList.remove('active'); }
+
+/* ===== Export CSV ===== */
+function exportCSV(){
+  const {rows} = computeRanking();
+  const header = ['Rang','Nom','Classe','Total','Parties','Moyenne','Dernière activité'];
+  const lines = [header.join(',')];
+  rows.forEach((r,i)=>{
+    const cells = [
+      i+1, r.name, r.classe||'', r.total.toFixed(2), r.games, r.avg.toFixed(2),
+      r.lastAt ? new Date(r.lastAt).toISOString() : ''
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`);
+    lines.push(cells.join(','));
+  });
+  const csv = lines.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `classement_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
-document.getElementById("searchInput").addEventListener("input", renderRanking);
-renderRanking();
+
+/* ===== Événements ===== */
+$('#searchInput').addEventListener('input', render);
+$('#range').addEventListener('change', render);
+$('#byClass').addEventListener('change', render);
+$('#bySubject').addEventListener('change', render);
+$('#sort').addEventListener('change', render);
+$('#mergeNames').addEventListener('change', render);
+$('#resetBtn').addEventListener('click', ()=>{
+  $('#range').value='all';
+  $('#byClass').value='';
+  $('#bySubject').value='';
+  $('#sort').value='total';
+  $('#mergeNames').checked=false;
+  $('#searchInput').value='';
+  render();
+});
+$('#exportBtn').addEventListener('click', exportCSV);
+
+/* ===== Go ===== */
+render();
 </script>
 </body>
 </html>
