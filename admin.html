@@ -175,7 +175,6 @@
           <div class="title" style="font-size:12px">Top des clés volumineuses</div>
           <div id="storageBreakdown" class="muted" style="font-size:12px">—</div>
         </div>
-        <!-- (plus de purge UI) -->
       </div>
     </div>
 
@@ -353,13 +352,25 @@
 
   <!-- ==== APP LOGIC ==== -->
   <script>
-    /* Session (souple) */
+    /* Session (souple + fallback window.name) */
     (function(){
       const KEY='adminSession';
       function now(){return Date.now();}
-      function get(){try{const raw=sessionStorage.getItem(KEY)||localStorage.getItem(KEY);if(!raw) return null;
-        const s=JSON.parse(raw); if(!s||!s.user||!s.until||s.until<=now()) return null; return s;}catch{return null}}
-      const sess=get(); if(sess){ document.getElementById('adminName').textContent = sess.user || 'Admin'; document.getElementById('who').textContent = sess.user || 'Admin'; }
+      function get(){
+        try{
+          let raw = sessionStorage.getItem(KEY) || localStorage.getItem(KEY);
+          if(!raw && window.name && window.name.startsWith('QUIZSESS:')) raw = window.name.slice(9);
+          if(!raw) return null;
+          const s=JSON.parse(raw);
+          if(!s||!s.user||!s.until||s.until<=now()) return null;
+          return s;
+        }catch{return null}
+      }
+      const sess=get();
+      if(sess){
+        document.getElementById('adminName').textContent = sess.user || 'Admin';
+        document.getElementById('who').textContent = sess.user || 'Admin';
+      }
     })();
 
     /* Helpers */
@@ -387,33 +398,23 @@
       const ts=new Date().toISOString(); localStorage.setItem('lastExportAt', ts); window.CACHE.lastExportAt = ts; refreshKPIs();
     };
     $('#importBtn').onclick=()=>$('#importFile').click();
-    $('#importFile').addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; const txt=await f.text(); const data=JSON.parse(txt||'{}'); for(const [k,v] of Object.entries(data)){ await DB.set(k,v); localStorage.setItem(k, JSON.stringify(v)); }
+    $('#importFile').addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; const txt=await f.text(); const data=JSON.parse(txt||'{}'); for(const [k,v] of Object.entries(data)){ await DB.set(k,v); try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
       const re = await DB.getMany(['students','studentsByClass','quizzes','historiqueParties','lastGameResults','lastExportAt']); Object.assign(window.CACHE, re); init(); alert('Import terminé.');
     });
     function logout(){ try{sessionStorage.removeItem('adminSession');localStorage.removeItem('adminSession');}catch{} location.replace('index.html'); }
     $('#logout').onclick=logout; $('#logoutCard').onclick=logout;
 
-    /* Données */
-    let students = read('students','[]');
-    let byClass  = read('studentsByClass','{}');
-    let quizzes  = read('quizzes','[]');
-    let games    = read('historiqueParties','[]');
-
-    /* Outils migration & agrégation (compteurs robustes) */
-    function collectStudents(){
-      const s  = (read('students','[]') || []).slice();
-      const bc = read('studentsByClass','{}') || {};
-      Object.entries(bc).forEach(([cls, arr])=>{
-        (arr||[]).forEach(n => s.push({ name:String(n).trim(), classe:cls }));
-      });
-      const seen=new Set(), out=[];
-      s.forEach(x=>{
-        const name=(x.name || ((x.prenom||'')+' '+(x.nom||''))).trim();
-        const cls =(x.classe||'').trim();
-        const key=(name+'|'+cls).toLowerCase();
-        if(name && !seen.has(key)){ seen.add(key); out.push({name, classe:cls}); }
-      });
-      return out;
+    /* ===== IDs & migrations élèves (homonymes autorisés) ===== */
+    function newId(){
+      if (crypto?.randomUUID) return crypto.randomUUID();
+      const a=new Uint8Array(8); try{ crypto.getRandomValues(a); }catch(e){ for(let i=0;i<a.length;i++) a[i]=Math.random()*256|0; }
+      return 's_'+Array.from(a,b=>b.toString(16).padStart(2,'0')).join('');
+    }
+    function ensureStudentIds(list){
+      let changed=false;
+      (list||[]).forEach(st=>{ if(!st.id){ st.id=newId(); changed=true; } });
+      if (changed) write('students', list);
+      return list;
     }
     function migrateLegacyShape(){
       const s  = read('students','[]') || [];
@@ -421,10 +422,24 @@
       if (!s.length && bc && Object.keys(bc).length){
         const merged=[];
         Object.entries(bc).forEach(([cls, list])=>{
-          (list||[]).forEach(n => merged.push({name:String(n).trim(), classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString()}));
+          (list||[]).forEach(n => merged.push({id:newId(), name:String(n).trim(), classe:cls, points:0, subjects:{}, createdAt:new Date().toISOString()}));
         });
         if (merged.length){ write('students', merged); }
+      } else {
+        // Assure que tous les élèves ont un id
+        ensureStudentIds(s);
       }
+    }
+
+    /* Données */
+    let students = read('students','[]');
+    let quizzes  = read('quizzes','[]');
+    let games    = read('historiqueParties','[]');
+
+    /* Agrégation (SANS déduplication par nom) */
+    function collectStudents(){
+      const s = ensureStudentIds(read('students','[]') || []);
+      return s; // chaque entrée représente un élève unique (id)
     }
 
     /* Activité */
@@ -440,7 +455,9 @@
     }
     const actRange=$('#actRange'), actClass=$('#actClass'), actSubject=$('#actSubject'), actCanvas=$('#actCanvas'), actTip=$('#actTip');
     function fillActivityFilters(){
-      const setCls=new Set(Object.keys(byClass||{})); (games||[]).forEach(g=>{ if(g.classe||g.className) setCls.add(g.classe||g.className); });
+      const s = collectStudents();
+      const setCls=new Set(s.map(x=>x.classe).filter(Boolean));
+      (games||[]).forEach(g=>{ if(g.classe||g.className) setCls.add(g.classe||g.className); });
       actClass.innerHTML = `<option value="">Toutes les classes</option>` + [...setCls].sort().map(c=>`<option>${c}</option>`).join('');
       const setSubj=new Set(); (games||[]).forEach(g=>{ if(g.matiere||g.subject) setSubj.add(g.matiere||g.subject); });
       actSubject.innerHTML = `<option value="">Toutes matières</option>` + [...setSubj].sort().map(m=>`<option>${m}</option>`).join('');
@@ -550,12 +567,15 @@
 
     /* KPIs */
     function refreshKPIs(){
-      students = read('students','[]'); byClass=read('studentsByClass','{}'); quizzes=read('quizzes','[]'); games=read('historiqueParties','[]');
+      students = read('students','[]'); quizzes=read('quizzes','[]'); games=read('historiqueParties','[]');
 
-      const allStudents = collectStudents();
+      const allStudents = collectStudents(); // avec id, pas de déduplication par nom
       $('#k_students').textContent = allStudents.length;
       $('#badgeEleves').textContent = allStudents.length;
-      $('#badgeClasses').textContent = Object.keys(byClass||{}).length || new Set(allStudents.map(s=>s.classe).filter(Boolean)).size;
+
+      // Nombre de classes distinctes basé sur les élèves (et pas seulement sur studentsByClass)
+      const classCount = new Set(allStudents.map(s=>s.classe).filter(Boolean)).size;
+      $('#badgeClasses').textContent = classCount;
 
       $('#k_quiz').textContent = (quizzes||[]).length;
       $('#badgeQuiz') && ($('#badgeQuiz').textContent = (quizzes||[]).length);
@@ -572,7 +592,7 @@
     /* INIT */
     function init(){
       migrateLegacyShape();
-      students = read('students','[]'); byClass=read('studentsByClass','{}'); quizzes=read('quizzes','[]'); games=read('historiqueParties','[]');
+      students = read('students','[]'); quizzes=read('quizzes','[]'); games=read('historiqueParties','[]');
       refreshKPIs(); fillActivityFilters(); updateActivity();
     }
 
@@ -580,7 +600,7 @@
     window.addEventListener('DB_READY', init);
     document.addEventListener('DOMContentLoaded', ()=> setTimeout(init, 0));
     document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) init(); });
-    window.addEventListener('storage', (e)=>{ if(["students","studentsByClass","quizzes","historiqueParties","lastGameResults","__ping"].includes(e.key)){ init(); } });
+    window.addEventListener('storage', (e)=>{ if(["students","quizzes","historiqueParties","lastGameResults","__ping"].includes(e.key)){ init(); } });
   </script>
 </body>
 </html>
