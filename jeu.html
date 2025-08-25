@@ -353,14 +353,24 @@
   </div>
 
   <script>
-    /* ========= Contexte ========= */
+    /* ========= Contexte & compat IDs ========= */
     const params     = new URLSearchParams(window.location.search);
     const subject    = params.get("subject");
     const isDuo      = localStorage.getItem("modeDuo") === "true";
-    const teamsParam = params.get("teams");
-    const duoList    = JSON.parse(params.get("duos") || "[]");
-    const soloList   = JSON.parse(params.get("students") || "[]");
-    const teams      = teamsParam ? JSON.parse(teamsParam) : (isDuo ? duoList : soloList.map(n => [n]));
+
+    // Legacy (par noms)
+    const teamsParamNames = params.get("teams");
+    const duoListNames    = JSON.parse(params.get("duos") || "[]");
+    const soloListNames   = JSON.parse(params.get("students") || "[]");
+    const legacyTeams     = teamsParamNames ? JSON.parse(teamsParamNames) : (isDuo ? duoListNames : soloListNames.map(n => [n]));
+
+    // Nouveau (par IDs)
+    const teamsIds  = JSON.parse(params.get("teamsIds")   || "null");
+    const duosIds   = JSON.parse(params.get("duosIds")    || "null");
+    const studsIds  = JSON.parse(params.get("studentsIds")|| "null");
+    const groupsIds = teamsIds || duosIds || (Array.isArray(studsIds) ? studsIds.map(id=>[id]) : null);
+
+    const playersMap = JSON.parse(localStorage.getItem("playersMap") || "{}"); // {id:{id,name,classe,display}}
 
     const nomPartie = localStorage.getItem("nomPartie") || "Partie sans nom";
     document.getElementById("gameTitle").textContent   = "Jeu en direct";
@@ -370,10 +380,47 @@
     const chronoDisplay= document.getElementById("chrono");
     const allStudents  = JSON.parse(localStorage.getItem("students") || "[]");
 
-    function getStudent(name){ return allStudents.find(s => s.name === name) || {}; }
-    function getClasse(name){ const s = getStudent(name); return s.classe || "—"; }
+    // Helpers data
+    const byId = new Map(allStudents.filter(s=>s && s.id).map(s=>[s.id, s]));
+
+    function nameOf(id){
+      const p = playersMap[id];
+      return (p && (p.display || p.name)) || (byId.get(id)?.name) || String(id);
+    }
+    function classeOf(id){
+      const p = playersMap[id];
+      return (p && p.classe) || (byId.get(id)?.classe) || "—";
+    }
+    function getStudentByIdOrName(idOrName){
+      // Priorité ID, sinon nom exact (legacy)
+      return byId.get(idOrName) || allStudents.find(s => s.name === idOrName) || {};
+    }
+
+    function getClasseByName(name){ const s = allStudents.find(st => st.name === name) || {}; return s.classe || "—"; }
     function initials(str){ return (str||"").split(/\s+/).map(s=>s[0]||"").join("").slice(0,2).toUpperCase(); }
-    function escapeHtml(str){ return String(str||"").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[s])); }
+    function escapeHtml(str){ return String(str||"").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[s]); }
+
+    // Construction des groupes à afficher
+    // Chaque entrée: { key, ids?:string[], names:string[], title:string, classesLine:string }
+    const TEAMS_META = [];
+    if (groupsIds){
+      groupsIds.forEach((arr)=>{
+        const ids = (arr||[]).map(String);
+        const names = ids.map(nameOf);
+        const key = 'ID:' + ids.join('|');
+        const title = names.join(' + ');
+        const classesLine = ids.map(classeOf).join(' / ');
+        TEAMS_META.push({ key, ids, names, title, classesLine });
+      });
+    } else {
+      (legacyTeams || []).forEach((group)=>{
+        const names = Array.isArray(group) ? group : [group];
+        const key = 'N:' + names.join('|');
+        const title = names.join(' + ');
+        const classesLine = names.map(getClasseByName).join(' / ');
+        TEAMS_META.push({ key, ids:null, names, title, classesLine });
+      });
+    }
 
     /* ========= États ========= */
     const savedModes = JSON.parse(localStorage.getItem('gameModes') || '{}');
@@ -404,9 +451,9 @@
 
     // Équipe vs Équipe
     let superOf = {};                // teamKey => 'A' | 'B'
-    let teamOf  = {};                // playerName => 'A' | 'B'   👈 nouveau (pour résultats)
+    let teamOf  = {};                // playerKey (id ou nom) => 'A' | 'B'
     let superScoreA = 0, superScoreB = 0;
-    let totalPlayersA = 0, totalPlayersB = 0; // pour la répartition finale
+    let totalPlayersA = 0, totalPlayersB = 0;
 
     // Duel
     let currentDuel = null;          // [teamKey1, teamKey2]
