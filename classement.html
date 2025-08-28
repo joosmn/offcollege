@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -6,106 +7,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
 :root {
-  --bg: #f8faf9;
-  --mint: #a7f3d0;
-  --mint-strong: #34d399;
-  --text: #0f172a;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-  --gold: #fbbf24;
-  --silver: #d1d5db;
-  --bronze: #f59e0b;
+  --bg: #f8faf9; --mint: #a7f3d0; --mint-strong: #34d399;
+  --text: #0f172a; --muted: #6b7280; --border: #e5e7eb;
+  --gold: #fbbf24; --silver: #d1d5db; --bronze: #f59e0b;
   --danger:#ef4444; --danger-bg:#fff1f2; --danger-br:#fecdd3;
 }
 *{box-sizing:border-box}
-body {
-  font-family: system-ui, ui-sans-serif, -apple-system, "Segoe UI", Roboto, Arial;
-  background: linear-gradient(160deg,#fff,#f8faf9 40%,#e6fff3 100%);
-  margin: 0;
-  padding: 20px;
-  color: var(--text);
-}
-.container {
-  max-width: 1000px;
-  margin: auto;
-  background: white;
-  border-radius: 20px;
-  padding: 25px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-}
-h1 { text-align: center; margin: 0 0 15px; }
-.topbar {
-  display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin-bottom:18px;
-}
-.search-box {
-  display:flex; align-items:center; gap:8px; border:1px solid var(--border); border-radius:12px; padding:6px 10px; background:#fff;
-}
-.search-box input {
-  padding:8px 10px; border-radius:8px; border:0; font-size:15px; width:260px; outline:0;
-}
-.search-box .icon { font-size:18px; color: var(--muted); }
-
-.reset-btn{
-  border:1px solid var(--danger-br); background:var(--danger-bg); color:var(--danger);
-  padding:8px 12px; border-radius:10px; font-weight:800; cursor:pointer;
-}
-.reset-btn:hover{ filter:brightness(.97); }
-
-.podium {
-  display:flex; justify-content:center; gap:30px; margin:30px 0 40px; flex-wrap:wrap;
-}
-.podium .player { text-align:center; }
-.podium .avatar {
-  width: 90px; height: 90px; border-radius: 50%;
-  display:flex; align-items:center; justify-content:center;
-  font-size:26px; font-weight:700; color:#fff;
-}
-.podium .name { margin-top:6px; font-weight:600; }
-.podium .score { color: var(--mint-strong); font-weight:700; }
-
-.list { display:flex; flex-direction:column; gap:10px; }
-.item {
-  display:flex; justify-content:space-between; align-items:center;
-  padding:10px 14px; background:#fdfdfd; border:1px solid var(--border); border-radius:12px;
-}
-.item:hover { background:#f8fdfb; }
-.item .left { display:flex; align-items:center; gap:10px; }
-.avatar-small {
-  width:36px; height:36px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff;
-}
-.score { font-weight:700; color: var(--mint-strong); }
-
-.details-btn {
-  background: var(--mint);
-  border: none; border-radius: 8px;
-  padding: 4px 8px; font-size: 12px; cursor: pointer;
-  color: #064e3b; transition: background .2s;
-}
-.details-btn:hover { background: var(--mint-strong); color:#fff; }
-
-.modal {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-  display:flex; align-items:center; justify-content:center;
-  opacity:0; pointer-events:none; transition: opacity .3s ease;
-}
-.modal.active { opacity:1; pointer-events:auto; }
-.modal-content {
-  background:#fff; border-radius:16px; padding:20px; max-width:420px; width:90%;
-  box-shadow:0 20px 40px rgba(0,0,0,0.2);
-}
-.modal-header { font-weight:800; font-size:18px; margin-bottom:10px; }
-.modal-body { font-size:14px; line-height:1.5; }
-.close-btn {
-  margin-top:15px; background: var(--mint); border:0; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:700; color:#064e3b;
-}
-.close-btn:hover { background: var(--mint-strong); color:#fff; }
+body{font-family:system-ui,ui-sans-serif,-apple-system,"Segoe UI",Roboto,Arial;background:linear-gradient(160deg,#fff,#f8faf9 40%,#e6fff3 100%);margin:0;padding:20px;color:var(--text)}
+.container{max-width:1000px;margin:auto;background:#fff;border-radius:20px;padding:25px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
+h1{text-align:center;margin:0 0 15px}
+.topbar{display:flex;gap:10px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+.search-box{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:12px;padding:6px 10px;background:#fff}
+.search-box input{padding:8px 10px;border-radius:8px;border:0;font-size:15px;width:260px;outline:0}
+.search-box .icon{font-size:18px;color:var(--muted)}
+.reset-btn{border:1px solid var(--danger-br);background:var(--danger-bg);color:var(--danger);padding:8px 12px;border-radius:10px;font-weight:800;cursor:pointer}
+.reset-btn:hover{filter:brightness(.97)}
+.podium{display:flex;justify-content:center;gap:30px;margin:30px 0 40px;flex-wrap:wrap}
+.podium .player{text-align:center}
+.podium .avatar{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;color:#fff}
+.podium .name{margin-top:6px;font-weight:600}
+.podium .score{color:var(--mint-strong);font-weight:700}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#fdfdfd;border:1px solid var(--border);border-radius:12px}
+.item:hover{background:#f8fdfb}
+.item .left{display:flex;align-items:center;gap:10px}
+.avatar-small{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff}
+.score{font-weight:700;color:var(--mint-strong)}
+.details-btn{background:var(--mint);border:none;border-radius:8px;padding:4px 8px;font-size:12px;cursor:pointer;color:#064e3b;transition:background .2s}
+.details-btn:hover{background:var(--mint-strong);color:#fff}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s ease}
+.modal.active{opacity:1;pointer-events:auto}
+.modal-content{background:#fff;border-radius:16px;padding:20px;max-width:420px;width:90%;box-shadow:0 20px 40px rgba(0,0,0,0.2)}
+.modal-header{font-weight:800;font-size:18px;margin-bottom:10px}
+.modal-body{font-size:14px;line-height:1.5}
+.close-btn{margin-top:15px;background:var(--mint);border:0;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;color:#064e3b}
+.close-btn:hover{background:var(--mint-strong);color:#fff}
+.empty{padding:14px;border:1px dashed var(--border);border-radius:12px;text-align:center;color:var(--muted);font-weight:800}
 </style>
 </head>
 <body>
 <div class="container">
   <h1>🏆 Classement Général</h1>
-
   <div class="topbar">
     <div class="search-box">
       <span class="icon">🔍</span>
@@ -113,12 +55,10 @@ h1 { text-align: center; margin: 0 0 15px; }
     </div>
     <button class="reset-btn" id="resetBtn" type="button">♻️ Réinitialiser le classement</button>
   </div>
-
   <div class="podium" id="podium"></div>
   <div class="list" id="rankingList"></div>
 </div>
 
-<!-- Modal détails -->
 <div class="modal" id="detailsModal" onclick="if(event.target===this)closeModal()">
   <div class="modal-content">
     <div class="modal-header" id="modalTitle"></div>
@@ -128,69 +68,101 @@ h1 { text-align: center; margin: 0 0 15px; }
 </div>
 
 <script>
-/* ========= Utils ========= */
-const initials = name => (name||'').trim().split(/\s+/).map(n=>n[0]||'').join('').slice(0,2).toUpperCase();
+/* ===== Utils & loaders (robustes) ===== */
+const initials = n => (n||'').trim().split(/\s+/).map(x=>x[0]||'').join('').slice(0,2).toUpperCase();
 const colorAt  = i => ["#f87171","#60a5fa","#34d399","#fbbf24","#a78bfa","#f472b6","#fb923c"][i%7];
-const canon    = s => String(s||"").normalize('NFC').trim().replace(/\s+/g,' ').toLowerCase();
+const canon    = s => String(s||'').normalize('NFC').trim().replace(/\s+/g,' ').toLowerCase();
 
-let AGG_INDEX = new Map(); // key -> {display, total, classes(Map), subjects(Object)}
+async function getLS(k, fb){
+  // tente IndexedDB wrapper s’il existe
+  try{ if(window.DB?.get){ const v = await window.DB.get(k); if(v!==undefined) return v; } }catch{}
+  try{ const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : fb; }catch{ return fb; }
+}
 
-/* ========= Agrégation robuste ========= */
-function aggregatePointsIndividuels(){
-  const students = JSON.parse(localStorage.getItem("students") || "[]");
-  AGG_INDEX = new Map();
+function splitTeam(teamKey){ return String(teamKey||'').split('+').map(s=>s.trim()).filter(Boolean); }
+
+/* ===== Agrégation depuis l'historique (fallback élèves) ===== */
+let AGG = new Map(); // key -> {display,total,classes(Map),subjects(Object)}
+
+async function buildAggregates(){
+  AGG = new Map();
+  const students = await getLS('students', []);
+  const hist = await getLS('historiqueParties', []);
+
+  let totalFromHist = 0;
 
   function ensure(key, display){
-    if (!AGG_INDEX.has(key)){
-      AGG_INDEX.set(key, { display, total:0, classes:new Map(), subjects:{} });
-    }else{
-      const rec = AGG_INDEX.get(key);
-      if ((display||'').length > (rec.display||'').length) rec.display = display;
-    }
-    return AGG_INDEX.get(key);
+    if(!AGG.has(key)) AGG.set(key, {display, total:0, classes:new Map(), subjects:{}});
+    const rec = AGG.get(key);
+    if ((display||'').length > (rec.display||'').length) rec.display = display;
+    return rec;
   }
 
-  for (const s of students){
-    if (!s || !s.name) continue;
-
-    if (String(s.name).includes("+")){
-      const members = String(s.name).split("+").map(n=>n.trim()).filter(Boolean);
-      const share = (Number(s.points)||0) / Math.max(1, members.length);
-      for (const m of members){
+  // 1) Historique des parties (prioritaire si non vide)
+  for(const h of (hist||[])){
+    const scores = h?.scores || {};
+    for(const [teamKey, ptsRaw] of Object.entries(scores)){
+      const pts = Number(ptsRaw)||0;
+      const members = splitTeam(teamKey);
+      const share = pts / Math.max(1, members.length);
+      members.forEach(m=>{
         const k = canon(m);
         const rec = ensure(k, m);
         rec.total += share;
-        if (s.classe) rec.classes.set(s.classe, (rec.classes.get(s.classe)||0)+1);
-      }
-      continue;
-    }
-
-    const key = canon(s.name);
-    const rec = ensure(key, s.name);
-    rec.total += Number(s.points||0);
-    if (s.classe) rec.classes.set(s.classe, (rec.classes.get(s.classe)||0)+1);
-    if (s.subjects && typeof s.subjects==='object'){
-      for (const [mat,pts] of Object.entries(s.subjects)){ rec.subjects[mat]=(rec.subjects[mat]||0)+Number(pts||0); }
+      });
+      totalFromHist += Math.max(0, pts);
     }
   }
 
+  // 2) Fallback ou addition légère: si l’historique est vide (ou 0), on utilise students.points
+  if (totalFromHist === 0){
+    for(const s of (students||[])){
+      if(!s?.name) continue;
+      const name = String(s.name);
+      if (name.includes('+')){
+        const members = splitTeam(name);
+        const share = (Number(s.points)||0) / Math.max(1, members.length);
+        members.forEach(m=>{
+          const k=canon(m); const rec=ensure(k, m); rec.total += share;
+          if (s.classe) rec.classes.set(s.classe, (rec.classes.get(s.classe)||0)+1);
+          if (s.subjects && typeof s.subjects==='object'){
+            for(const [sub, val] of Object.entries(s.subjects)){ rec.subjects[sub]=(rec.subjects[sub]||0)+Number(val||0); }
+          }
+        });
+      } else {
+        const k=canon(name); const rec=ensure(k, name);
+        rec.total += Number(s.points)||0;
+        if (s.classe) rec.classes.set(s.classe, (rec.classes.get(s.classe)||0)+1);
+        if (s.subjects && typeof s.subjects==='object'){
+          for(const [sub, val] of Object.entries(s.subjects)){ rec.subjects[sub]=(rec.subjects[sub]||0)+Number(val||0); }
+        }
+      }
+    }
+  }
+
+  // 3) Retour tableau trié
   const arr=[];
-  for (const [key, rec] of AGG_INDEX.entries()){
+  for(const [key, rec] of AGG.entries()){
     arr.push([rec.display.trim().replace(/\s+/g,' '), rec.total, key]);
   }
   arr.sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0]));
   return arr;
 }
 
-/* ========= Rendu ========= */
-function renderRanking(){
-  const search = (document.getElementById("searchInput").value||"").toLowerCase().trim();
-  const list = document.getElementById("rankingList");
-  const podiumDiv = document.getElementById("podium");
-  list.innerHTML=""; podiumDiv.innerHTML="";
+/* ===== Rendu ===== */
+async function render(){
+  const podium = document.getElementById('podium');
+  const list   = document.getElementById('rankingList');
+  const q = (document.getElementById('searchInput').value||'').toLowerCase().trim();
 
-  let ranking = aggregatePointsIndividuels();
-  if (search){ ranking = ranking.filter(([name]) => name.toLowerCase().includes(search)); }
+  const ranking = (await buildAggregates()).filter(([name])=> name.toLowerCase().includes(q));
+
+  podium.innerHTML=''; list.innerHTML='';
+
+  if(!ranking.length){
+    list.innerHTML = `<div class="empty">Aucune donnée à afficher.</div>`;
+    return;
+  }
 
   const top3 = ranking.slice(0,3);
   const medals = ['var(--gold)','var(--silver)','var(--bronze)'];
@@ -200,10 +172,10 @@ function renderRanking(){
       <div class="avatar" style="background:${medals[i]}">${initials(p[0])}</div>
       <div class="name">${p[0]}</div>
       <div class="score">${(p[1]||0).toFixed(1)} pts</div>`;
-    podiumDiv.appendChild(div);
+    podium.appendChild(div);
   });
 
-  ranking.forEach(([name, score], i)=>{
+  ranking.forEach(([name,score],i)=>{
     const row=document.createElement('div'); row.className='item';
     row.innerHTML = `
       <div class="left">
@@ -215,49 +187,52 @@ function renderRanking(){
         <button class="details-btn" data-name="${name}">Détails</button>
       </div>`;
     row.querySelector('.details-btn').onclick = ()=> showDetails(name);
-    document.getElementById("rankingList").appendChild(row);
+    list.appendChild(row);
   });
 }
 
-/* ========= Détails ========= */
+/* ===== Détails (depuis AGG) ===== */
 function showDetails(displayName){
   const key = canon(displayName);
-  const rec = AGG_INDEX.get(key);
-  document.getElementById("modalTitle").textContent = `Statistiques de ${displayName}`;
-  if (!rec){
-    document.getElementById("modalBody").innerHTML = "Aucune donnée trouvée.";
-    document.getElementById("detailsModal").classList.add("active"); return;
+  const rec = AGG.get(key);
+  document.getElementById('modalTitle').textContent = `Statistiques de ${displayName}`;
+  if(!rec){
+    document.getElementById('modalBody').innerHTML = `Aucune donnée trouvée.`;
+    document.getElementById('detailsModal').classList.add('active'); return;
   }
-  let mainClass = "Inconnue";
-  if (rec.classes.size){
+  let mainClass='Inconnue';
+  if(rec.classes.size){
     const sorted=[...rec.classes.entries()].sort((a,b)=>b[1]-a[1]);
     mainClass = sorted[0][0];
   }
   let html = `<strong>Classe :</strong> ${mainClass}<br>
-              <strong>Points totaux (agrégés) :</strong> ${(rec.total||0).toFixed(1)}<br>`;
-  const subs=Object.entries(rec.subjects||{}).sort((a,b)=>b[1]-a[1]);
-  if (subs.length){
+              <strong>Points agrégés :</strong> ${(rec.total||0).toFixed(1)}<br>`;
+  const subs = Object.entries(rec.subjects||{}).sort((a,b)=>b[1]-a[1]);
+  if(subs.length){
     html += `<br><strong>Par matière :</strong><br>`;
     subs.forEach(([m,pts])=> html += ` - ${m} : ${pts.toFixed(1)} pts<br>`);
   }
-  document.getElementById("modalBody").innerHTML = html;
-  document.getElementById("detailsModal").classList.add("active");
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('detailsModal').classList.add('active');
 }
-function closeModal(){ document.getElementById("detailsModal").classList.remove("active"); }
+function closeModal(){ document.getElementById('detailsModal').classList.remove('active'); }
 
-/* ========= Reset classement ========= */
-function resetClassement(){
-  if(!confirm("Réinitialiser le classement ?\nTous les points (et points par matière) seront remis à 0 pour tous les élèves. Les élèves/classes sont conservés.")) return;
-  const students = JSON.parse(localStorage.getItem("students")||"[]");
-  const updated  = students.map(s => ({...s, points:0, subjects:{}}));
-  localStorage.setItem("students", JSON.stringify(updated));
-  alert("Classement réinitialisé ✔");
-  renderRanking();
+/* ===== Reset (points élèves uniquement) ===== */
+async function resetClassement(){
+  if(!confirm("Réinitialiser le classement ?\nMet les points de tous les élèves à 0 (l’historique des parties est conservé).")) return;
+  const students = await getLS('students', []);
+  const updated = (students||[]).map(s=>({...s, points:0, subjects:{}}));
+  try{ await (window.DB?.set?.('students', updated)); }catch{}
+  localStorage.setItem('students', JSON.stringify(updated));
+  alert('Points élèves remis à zéro. Le classement (basé sur l’historique) peut rester inchangé si des parties ont déjà été jouées.');
+  render();
 }
 
-document.getElementById("resetBtn").addEventListener("click", resetClassement);
-document.getElementById("searchInput").addEventListener("input", renderRanking);
-renderRanking();
+/* ===== Wire & init ===== */
+document.getElementById('searchInput').addEventListener('input', render);
+document.getElementById('resetBtn').addEventListener('click', resetClassement);
+document.addEventListener('DOMContentLoaded', render);
+window.addEventListener('DB_READY', render);
 </script>
 </body>
 </html>
